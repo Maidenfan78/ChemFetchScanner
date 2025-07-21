@@ -26,7 +26,8 @@ export default function Results() {
     })
       .then(res => res.json())
       .then(data => {
-        setItems(data.scraped);
+        const scraped = Array.isArray(data?.scraped) ? data.scraped : [];
+        setItems(scraped);
         setLoading(false);
       })
       .catch(err => {
