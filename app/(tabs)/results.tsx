@@ -10,7 +10,7 @@ export default function Results() {
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
-      <Text>Scanned code: {code}</Text>
+      <Text>Scanned code: {code ?? 'None'}</Text>
     </View>
   );
 }
