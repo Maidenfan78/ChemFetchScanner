@@ -1,7 +1,6 @@
 import { Text, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
-import Constants from 'expo-constants';
 
 type ScrapedItem = {
   url: string;
@@ -20,8 +19,7 @@ export default function Results() {
 
   useEffect(() => {
     if (!code) return;
-    const apiUrl = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3000';
-    fetch(`${apiUrl}/scan`, {
+    fetch('http://192.168.68.52:3000/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, user_id: 'some-user-uuid' }), // change for auth
