@@ -38,9 +38,6 @@
       "expo-barcode-scanner",
       "expo-build-properties"
     ],
-    "extra": {
-      "apiUrl": "http://localhost:3000"
-    },
     "experiments": {
       "typedRoutes": true
     }
