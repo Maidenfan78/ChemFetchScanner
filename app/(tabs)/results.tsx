@@ -1,5 +1,5 @@
 import { Text, View } from 'react-native';
-import { Stack } from 'expo-router'; // ← add this
+import { Stack } from 'expo-router'; 
 import { useLocalSearchParams } from 'expo-router';
 
 export default function Results() {
