@@ -22,7 +22,7 @@ export default function Results() {
     fetch('http://192.168.68.52:3000/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, user_id: 'some-user-uuid' }), // change for auth
+      body: JSON.stringify({ code }),
     })
       .then(res => res.json())
       .then(data => {
