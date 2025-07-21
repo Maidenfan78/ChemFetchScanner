@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Button, StyleSheet } from 'react-native';
+import { View, Text, Button, StyleSheet, Alert } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import { useRouter } from 'expo-router';
 
 export default function Scanner() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     requestPermission();
@@ -15,7 +17,13 @@ export default function Scanner() {
 
   const handleBarcodeScanned = ({ type, data }: BarcodeScanningResult) => {
     setScanned(true);
-    alert(`Scanned ${type}: ${data}`);
+    Alert.alert('Scanned', `Scanned ${type}: ${data}`, [
+      {
+        text: 'Results',
+        onPress: () => router.push(`/results?code=${encodeURIComponent(data)}`),
+      },
+      { text: 'Scan again', onPress: () => setScanned(false) },
+    ]);
   };
 
   return (
