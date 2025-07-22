@@ -10,6 +10,8 @@ A cross-platform Expo app to scan EAN‑8/EAN‑13 barcodes, fetch product info 
 - **Backend service** fetches top 5 Google results and scrapes key product details using Axios + Cheerio
 - **Stores data** in Supabase under `products` table with user-level row security
 - **Built with Expo Router**, supported by modern React components
+- **Confirm with photo** – capture an image after scanning and verify product name/size with OCR
+- **Only barcode & name stored** to avoid inaccurate manufacturer data
 
 ---
 
@@ -20,6 +22,7 @@ A cross-platform Expo app to scan EAN‑8/EAN‑13 barcodes, fetch product info 
 - **🚧 Backend**:
   - Node.js + Express
   - Axios & Cheerio for lightweight scraping
+  - Tesseract.js for OCR image recognition
   - Supabase for authentication & Postgres storage
 - **ℹ️ DB Schema**:
   - `products` table with fields like `barcode`, `product_name`, `manufacturer`, `size`, and `sds_url`
@@ -45,7 +48,7 @@ In /server/.env:
 
 ini
 Copy
-Edit
+@@ -49,51 +52,59 @@ Edit
 SB_URL=https://<your-supabase-project>.supabase.co
 SB_SERVICE_KEY=<service-role-secret>
 3️⃣ Run backend
@@ -71,7 +74,15 @@ Grant camera permission and scan barcode → navigates to Results screen
 
 App calls backend /scan endpoint with scanned code + user_id
 
-Receives scraped data and renders product details
+Server stores barcode and product name then returns scraped results
+
+User can tap **Confirm with Photo** on the results screen
+
+App captures an image and sends it to the /ocr endpoint
+
+Text is extracted and compared with the scraped name/size
+
+Displays whether the photo matches the product
 
 Backend Logic:
 
@@ -97,97 +108,3 @@ create table public.products (
   weight text,
   sds_url text,
   created_at timestamptz not null default now()
-);
-
--- RLS
-alter table public.products enable row level security;
-
-create policy "authenticated_insert_own"
-  on public.products for insert
-  with check (auth.uid() = user_id);
-create policy "authenticated_select_own"
-  on public.products for select
-  using (auth.uid() = user_id);
-🧪 Development Tips
-Replace scraping logic with Puppeteer for dynamic sites
-
-Add deduplication and feedback for scanning results
-
-Manage rate limits and user quotas in backend
-
-Write unit/integration tests for Express and Supabase interactions
-
-📚 References
-Expo expo-camera barcode scanning guide 
-DEV Community
-+2
-GitHub
-+2
-GitHub
-+2
-DEV Community
-+15
-Expo Documentation
-+15
-GeeksforGeeks
-+15
-GitHub
-npm
-GitHub
-GitHub
-+1
-GitHub
-+1
-GitHub
-+4
-GitHub
-+4
-GitHub
-+4
-GitHub
-+3
-johna.hashnode.dev
-+3
-Bootstrapped
-+3
-
-Simple Node.js + Supabase + Express examples 
-DEV Community
-Bootstrapped
-
-Axios + Cheerio scraping tutorials 
-GitHub
-
-✅ Contributing
-Fork the repo
-
-Install dependencies
-
-Add your feature or fix
-
-Submit a PR
-
-Please include:
-
-Context and motivation
-
-Screenshots/mockups
-
-Compatibility notes (OS, SDK versions, etc.)
-
-Licensed under MIT. 😊
-
-yaml
-Copy
-Edit
-
----
-
-### 🧭 Notes
-
-- **Replace `<repo-url>`** with the actual repository address.
-- **Ensure citation format includes web sources**; the citations above reference all key sources used.
-- You can adjust the flow based on your scraper/backend updates, such as adding UI for multiple results.
-
-Let me know if you'd like a CI/CD setup, EAS build config, or additional documentation sections!
-::contentReference[oaicite:21]{index=21}S
