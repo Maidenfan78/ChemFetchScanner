@@ -36,5 +36,3 @@ yarn-error.*
 *.tsbuildinfo
 
 **/.env
-**/.env
-**/.env
