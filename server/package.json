@@ -17,6 +17,8 @@
     "dotenv": "^17.2.0",
     "expo-build-properties": "~0.14.8",
     "express": "^5.1.0",
-    "puppeteer": "^24.14.0"
+    "puppeteer": "^24.14.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
 }
