@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import puppeteer from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import Tesseract from 'tesseract.js';
 
 const pptr = addExtra(puppeteer);
 pptr.use(StealthPlugin());
@@ -27,7 +28,7 @@ function isServiceRole(key) {
   }
 }
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // HEADLESS BROWSER SEARCH (Bing)
 async function fetchBingLinksHeadless(barcode) {
@@ -128,9 +129,9 @@ app.post('/scan', async (req, res) => {
   }
 
   if (existing) {
-    // Return the existing product info in 'scraped' for UI consistency
-    const { product_name: name = '', manufacturer = '', size = '', sds_url: sdsUrl = '', barcode } = existing;
-    const scraped = [{ url: '', name, manufacturer, size, sdsUrl }];
+    // Return stored name for consistency with front end
+    const { product_name: name = '' } = existing;
+    const scraped = [{ url: '', name, manufacturer: '', size: '', sdsUrl: '' }];
     return res.json({ code, product: existing, scraped });
   }
 
@@ -138,12 +139,23 @@ app.post('/scan', async (req, res) => {
   const scraped = (await Promise.all(urls.map(scrapeProductInfo))).filter(x => x);
   console.log('Scraped:', scraped);
   const top = scraped[0] || {};
-  const { name = '', manufacturer = '', size = '', sdsUrl = '' } = top;
+  const { name = '' } = top;
   const { error } = await supabase
     .from('products')
-    .insert([{ barcode: code, product_name: name, manufacturer, size, weight: size, sds_url: sdsUrl }]);
+    .insert([{ barcode: code, product_name: name }]);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ code, scraped });
+});
+
+app.post('/ocr', async (req, res) => {
+  const { image } = req.body;
+  if (!image) return res.status(400).json({ error: 'Missing image' });
+  try {
+    const { data: { text } } = await Tesseract.recognize(Buffer.from(image, 'base64'), 'eng');
+    res.json({ text });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.listen(3000,()=>console.log('Listening on 3000'));

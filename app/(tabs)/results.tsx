@@ -1,5 +1,5 @@
-import { Text, View, StyleSheet, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { Text, View, StyleSheet, ActivityIndicator, Button } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 
 type ScrapedItem = {
@@ -14,6 +14,7 @@ export const config = { title: 'Scan Results' };
 
 export default function Results() {
   const { code } = useLocalSearchParams<{ code: string }>();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ScrapedItem[]>([]);
 
@@ -64,13 +65,20 @@ export default function Results() {
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Product: {first.name || 'N/A'}</Text>
-      <Text>Manufacturer: {first.manufacturer || 'N/A'}</Text>
       <Text>Size: {first.size || 'N/A'}</Text>
       {first.sdsUrl ? (
         <Text style={styles.link}>SDS: {first.sdsUrl}</Text>
       ) : (
         <Text>No SDS found</Text>
       )}
+      <Button
+        title="Confirm with Photo"
+        onPress={() =>
+          router.push(
+            `/confirm?code=${encodeURIComponent(code ?? '')}&name=${encodeURIComponent(first.name)}&size=${encodeURIComponent(first.size)}`
+          )
+        }
+      />
     </View>
   );
 }
