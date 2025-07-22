@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Button, StyleSheet, Alert } from 'react-native';
+import { View, Text, Button, StyleSheet, Alert, Vibration } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useRouter } from 'expo-router';
 
@@ -18,6 +18,7 @@ export default function Scanner() {
   const handleBarcodeScanned = ({ type, data }: BarcodeScanningResult) => {
     console.log('🔍 onBarcodeScanned fired with type and data:', type, data);
     setScanned(true);
+    Vibration.vibrate(100);
     Alert.alert('Scanned', `Scanned ${type}: ${data}`, [
       {
         text: 'Results',
@@ -37,9 +38,22 @@ export default function Scanner() {
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         barcodeScannerSettings={{ barcodeTypes: ['ean8', 'ean13'] }}
       />
+      <View style={styles.targetBox} pointerEvents="none" />
       {scanned && <Button title="Scan again" onPress={() => setScanned(false)} />}
     </View>
   );
 }
 
-const styles = StyleSheet.create({ container: { flex: 1 } });
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  targetBox: {
+    position: 'absolute',
+    top: '40%',
+    left: '20%',
+    width: '60%',
+    height: '20%',
+    borderWidth: 2,
+    borderColor: '#fff',
+    borderRadius: 8,
+  },
+});
