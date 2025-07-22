@@ -29,7 +29,11 @@ async function fetchGoogleLinksHeadless(barcode) {
   const term = `Item ${barcode}`;
   console.log(`Headless searching for: ${term}`);
 
-  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+  const browser = await puppeteer.launch({
+    headless: true,
+    ignoreHTTPSErrors: true,
+    args: ['--no-sandbox']
+  });
   const page = await browser.newPage();
   await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-AU,en;q=0.9' });
   await page.setUserAgent(
@@ -42,6 +46,7 @@ async function fetchGoogleLinksHeadless(barcode) {
   const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(term)}&hl=en-AU&gl=AU&safe=off&num=10`;
   console.log(`Navigating to: ${searchUrl}`);
   await page.goto(searchUrl, { waitUntil: 'networkidle2' });
+  await page.waitForSelector('a', { timeout: 5000 }).catch(() => {});
 
   // 1. div.yuRUbf links
   let links = await page.$$eval('div.yuRUbf > a', els => els.map(a => a.href).slice(0, 5));
