@@ -16,11 +16,15 @@ export default function Scanner() {
   if (!permission.granted) return <Text>No camera access 🙁</Text>;
 
   const handleBarcodeScanned = ({ type, data }: BarcodeScanningResult) => {
+    console.log('🔍 onBarcodeScanned fired with type and data:', type, data);
     setScanned(true);
     Alert.alert('Scanned', `Scanned ${type}: ${data}`, [
       {
         text: 'Results',
-        onPress: () => router.push(`/results?code=${encodeURIComponent(data)}`),
+        onPress: () => {
+          console.log('📡 Navigating to Results with code:', data);
+          router.push(`/results?code=${encodeURIComponent(data)}`);
+        },
       },
       { text: 'Scan again', onPress: () => setScanned(false) },
     ]);

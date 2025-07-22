@@ -12,9 +12,11 @@
   "license": "ISC",
   "dependencies": {
     "@supabase/supabase-js": "^2.52.0",
+    "axios": "^1.6.1",
+    "cheerio": "^1.0.0-rc.12",
     "dotenv": "^17.2.0",
+    "expo-build-properties": "~0.14.8",
     "express": "^5.1.0",
-    "puppeteer": "^24.14.0",
-    "expo-build-properties": "~0.14.8"
+    "puppeteer": "^24.14.0"
   }
 }

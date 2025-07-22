@@ -19,19 +19,26 @@ export default function Results() {
 
   useEffect(() => {
     if (!code) return;
+    console.log('🔍 on Results mounted with code:', code);
+    console.log('📡 Sending POST to /scan with code:', code);
+
     fetch('http://192.168.68.52:3000/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code }),
     })
-      .then(res => res.json())
+      .then(res => {
+        console.log('📥 Scan fetch response status:', res.status);
+        return res.json();
+      })
       .then(data => {
+        console.log('✅ Scan API response:', data);
         const scraped = Array.isArray(data?.scraped) ? data.scraped : [];
         setItems(scraped);
         setLoading(false);
       })
       .catch(err => {
-        console.error(err);
+        console.error('❌ Scan fetch error:', err);
         setLoading(false);
       });
   }, [code]);
@@ -45,6 +52,7 @@ export default function Results() {
   }
 
   if (items.length === 0) {
+    console.log('🔍 No results found for code:', code);
     return (
       <View style={styles.center}>
         <Text style={styles.text}>No results found for {code}</Text>
