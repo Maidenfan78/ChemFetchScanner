@@ -10,6 +10,8 @@ A cross-platform Expo app to scan EAN‑8/EAN‑13 barcodes, fetch product info 
 - **Backend service** fetches top 5 Google results and scrapes key product details using Axios + Cheerio
 - **Stores data** in Supabase under `products` table with user-level row security
 - **Built with Expo Router**, supported by modern React components
+- **Confirm with photo** – capture an image after scanning and verify product name/size with OCR
+- **Only barcode & name stored** to avoid inaccurate manufacturer data
 
 ---
 
@@ -20,6 +22,7 @@ A cross-platform Expo app to scan EAN‑8/EAN‑13 barcodes, fetch product info 
 - **🚧 Backend**:
   - Node.js + Express
   - Axios & Cheerio for lightweight scraping
+  - Tesseract.js for OCR image recognition
   - Supabase for authentication & Postgres storage
 - **ℹ️ DB Schema**:
   - `products` table with fields like `barcode`, `product_name`, `manufacturer`, `size`, and `sds_url`
@@ -71,7 +74,15 @@ Grant camera permission and scan barcode → navigates to Results screen
 
 App calls backend /scan endpoint with scanned code + user_id
 
-Receives scraped data and renders product details
+Server stores barcode and product name then returns scraped results
+
+User can tap **Confirm with Photo** on the results screen
+
+App captures an image and sends it to the /ocr endpoint
+
+Text is extracted and compared with the scraped name/size
+
+Displays whether the photo matches the product
 
 Backend Logic:
 
