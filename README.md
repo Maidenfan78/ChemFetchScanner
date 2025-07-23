@@ -1,110 +1,86 @@
 # ChemFetchScanner
 
-A cross-platform Expo app to scan EAN‑8/EAN‑13 barcodes, fetch product info (name, manufacturer, size/weight, SDS URL) from the web, and store results in Supabase.
+ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans EAN-8 and EAN-13 barcodes, looks up product details on the web and stores them in a Supabase database. The backend now searches Bing using a headless browser and falls back to a lightweight scraper when necessary.
 
 ---
 
-## 🚀 Features
+## Features
 
-- **Scan barcodes** using `expo-camera` (EAN‑8, EAN‑13)
-- **Backend service** fetches top 5 Google results and scrapes key product details using Axios + Cheerio
-- **Stores data** in Supabase under `products` table with user-level row security
-- **Built with Expo Router**, supported by modern React components
-- **Confirm with photo** – capture an image after scanning and verify product name/size with OCR
-- **Only barcode & name stored** to avoid inaccurate manufacturer data
-
----
-
-## 🛠️ Tech Stack
-
-- **📱 Frontend**: 
-  - Expo (`expo-router`, `expo-camera`, TSX)
-- **🚧 Backend**:
-  - Node.js + Express
-  - Axios & Cheerio for lightweight scraping
-  - Tesseract.js for OCR image recognition
-  - Supabase for authentication & Postgres storage
-- **ℹ️ DB Schema**:
-  - `products` table with fields like `barcode`, `product_name`, `manufacturer`, `size`, and `sds_url`
+- **Barcode scanning** with `expo-camera`.
+- **Bing search** via headless Puppeteer (fallback to Cheerio).
+- **Database first** – if a scanned code already exists, saved details are returned immediately.
+- **Web scraping** of result pages for product name and size when a code is unknown.
+- **Image confirmation** – capture a focused photo of the product label and run OCR with Tesseract.
+- **Mismatch choice** – compare OCR results with scraped text, then choose which to keep or enter details manually.
+- **Supabase storage** for final name and size.
 
 ---
 
-## 🔧 Setup
+## Tech Stack
 
-### 1️⃣ Clone & install
+- **Frontend:** Expo (`expo-router`, `expo-camera`)
+- **Backend:** Node.js + Express, Puppeteer, Cheerio, Tesseract.js
+- **Database:** Supabase Postgres
 
-```bash
-git clone <repo-url>
-cd ChemFetchScanner
+The `products` table contains:
 
-# Install mobile dependencies
-npm install
+```sql
+CREATE TABLE products (
+  id SERIAL PRIMARY KEY,
+  barcode TEXT NOT NULL,
+  product_name TEXT,
+  manufacturer TEXT,
+  size TEXT,
+  weight TEXT,
+  sds_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+);
+```
 
-# Setup backend
-cd server
-npm install
-2️⃣ Add Supabase credentials
-In /server/.env:
+---
 
-ini
-Copy
-@@ -49,51 +52,59 @@ Edit
-SB_URL=https://<your-supabase-project>.supabase.co
-SB_SERVICE_KEY=<service-role-secret>
-3️⃣ Run backend
-bash
-Copy
-Edit
-cd server
-npm start
-# Server should output: "Listening on port 3000"
-4️⃣ Run mobile app
-Back in root:
+## Setup
 
-bash
-Copy
-Edit
-expo start
-Scan QR code and test both "Scanner" and "Scan Results" tabs.
+1. **Clone and install**
+   ```bash
+   git clone <repo-url>
+   cd ChemFetchScanner
+   npm install
+   ```
+2. **Configure the backend**
+   ```bash
+   cd server
+   npm install
+   cp .env.example .env    # create and edit with your Supabase keys
+   ```
+   The `.env` file requires:
+   ```ini
+   SB_URL=https://<project>.supabase.co
+   SB_SERVICE_KEY=<service-role-secret>
+   ```
+3. **Run the backend**
+   ```bash
+   npm start
+   ```
+4. **Run the mobile app** (from the project root)
+   ```bash
+   npm start
+   ```
+5. **Run tests**
+   ```bash
+   npm test
+   ```
 
-🧩 Usage Flow
-Mobile App:
+---
 
-Grant camera permission and scan barcode → navigates to Results screen
+## Workflow
 
-App calls backend /scan endpoint with scanned code + user_id
+1. Scan a barcode in the app.
+2. The server checks Supabase – if the barcode exists, stored data is returned.
+3. If not found, the server searches Bing, scrapes a few pages and returns the best guess for name and size.
+4. The user is prompted to take a close photo of the item label.
+5. OCR runs on the cropped label to extract a name and size.
+6. The scraped and OCR results are shown so the user can choose or manually edit.
+7. The chosen details are saved back to Supabase.
 
-Server stores barcode and product name then returns scraped results
-
-User can tap **Confirm with Photo** on the results screen
-
-App captures an image and sends it to the /ocr endpoint
-
-Text is extracted and compared with the scraped name/size
-
-Displays whether the photo matches the product
-
-Backend Logic:
-
-/scan: uses axios to fetch Google search, parses top URLs
-
-Scrapes each page for <h1>, brand, size/weight patterns, SDS PDF links
-
-Stores best match into Supabase via supabase-js
-
-📦 Migration
-The following SQL migration creates the products table:
-
-sql
-Copy
-Edit
-create table public.products (
-  id bigint primary key generated always as identity,
-  user_id uuid not null references auth.users(id),
-  barcode text not null,
-  product_name text,
-  manufacturer text,
-  size text,
-  weight text,
-  sds_url text,
-  created_at timestamptz not null default now()
+This cropped approach avoids extra artwork confusing the OCR and improves size detection.
