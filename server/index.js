@@ -17,6 +17,26 @@ dotenv.config();
 const app = express();
 const supabase = createClient(process.env.SB_URL, process.env.SB_SERVICE_KEY);
 
+let browserPromise;
+async function getBrowser() {
+  if (!browserPromise) {
+    browserPromise = pptr.launch({
+      headless: true,
+      ignoreHTTPSErrors: true,
+      args: ['--no-sandbox', '--ignore-certificate-errors']
+    });
+  }
+  return browserPromise;
+}
+
+async function closeBrowser() {
+  if (browserPromise) {
+    try { (await browserPromise).close(); } catch {}
+  }
+}
+process.on('SIGINT', () => closeBrowser().finally(() => process.exit()));
+process.on('SIGTERM', () => closeBrowser().finally(() => process.exit()));
+
 function isServiceRole(key) {
   if (!key) return false;
   const parts = key.split('.');
@@ -36,28 +56,30 @@ async function fetchBingLinksHeadless(barcode) {
   const term = `${barcode}`;
   console.log(`Headless searching Bing for: ${term}`);
 
-  const browser = await pptr.launch({
-    headless: true,
-    ignoreHTTPSErrors: true,
-    args: ['--no-sandbox', '--ignore-certificate-errors']
-  });
+  const browser = await getBrowser();
   const page = await browser.newPage();
   await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-AU,en;q=0.9' });
   await page.setUserAgent(
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
   );
+  await page.setRequestInterception(true);
+  page.on('request', req => {
+    const type = req.resourceType();
+    if (['image', 'stylesheet', 'font', 'media'].includes(type)) req.abort();
+    else req.continue();
+  });
 
   const searchUrl = `https://www.bing.com/search?q=${encodeURIComponent(term)}`;
   console.log(`Navigating to: ${searchUrl}`);
-  await page.goto(searchUrl, { waitUntil: 'networkidle2' });
-  await page.waitForSelector('li.b_algo h2 a', { timeout: 15000 });
+  await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('li.b_algo h2 a', { timeout: 10000 });
 
   const links = await page.$$eval('li.b_algo h2 a', els =>
     els.map(a => a.href).slice(0, 5)
   );
   console.log('Bing links:', links);
 
-  await browser.close();
+  await page.close();
   return links;
 }
 
