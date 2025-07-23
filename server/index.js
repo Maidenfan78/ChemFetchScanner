@@ -7,6 +7,8 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import Tesseract from 'tesseract.js';
 import fs from 'fs';
 import sharp from 'sharp';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const pptr = addExtra(puppeteer);
 pptr.use(StealthPlugin());
@@ -16,6 +18,8 @@ import { load } from 'cheerio';
 dotenv.config();
 const app = express();
 const supabase = createClient(process.env.SB_URL, process.env.SB_SERVICE_KEY);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let browserPromise;
 async function getBrowser() {
@@ -246,6 +250,7 @@ app.post('/ocr', async (req, res) => {
     // OCR
     const result = await Tesseract.recognize(processed, 'eng', {
       logger: m => console.log(m),
+      langPath: __dirname,
       tessedit_pageseg_mode: 6,
       preserve_interword_spaces: '1'
     });
