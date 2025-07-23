@@ -1,61 +1,241 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Button, StyleSheet, Image } from 'react-native';
+import { View, Text, Button, StyleSheet, Image, Alert, TextInput, Dimensions } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const TARGET_BOX_WIDTH = 0.7;
+const TARGET_BOX_HEIGHT = 0.15;
 
 export default function Confirm() {
-  const { name = '', size = '' } = useLocalSearchParams<{ name: string; size: string }>();
+  const { name: barcodeName = '', size: barcodeSize = '', code = '' } = useLocalSearchParams<{ name: string; size: string; code: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [photo, setPhoto] = useState<any>(null);
-  const [text, setText] = useState('');
-  const cameraRef = useRef<CameraView>(null);
+  const [ocr, setOcr] = useState<{ bestName?: string, bestSize?: string, text?: string }>({});
+  const [step, setStep] = useState<'photo' | 'pick' | 'edit' | 'done'>('photo');
+  const [error, setError] = useState('');
+  const [manualName, setManualName] = useState('');
+  const [manualSize, setManualSize] = useState('');
+  const router = useRouter();
 
   useEffect(() => { requestPermission(); }, []);
 
+  const cameraRef = useRef<CameraView>(null);
+
+  const cropInfo = {
+    left: Math.round((1 - TARGET_BOX_WIDTH) / 2 * SCREEN_WIDTH),
+    top: Math.round((1 - TARGET_BOX_HEIGHT) / 2 * SCREEN_HEIGHT),
+    width: Math.round(SCREEN_WIDTH * TARGET_BOX_WIDTH),
+    height: Math.round(SCREEN_HEIGHT * TARGET_BOX_HEIGHT),
+    screenWidth: SCREEN_WIDTH,
+    screenHeight: SCREEN_HEIGHT
+  };
+
   const capture = async () => {
+    setError('');
+    setOcr({});
+    setStep('photo');
     if (!cameraRef.current) return;
-    const pic = await cameraRef.current.takePictureAsync({ base64: true });
-    setPhoto(pic);
     try {
+      const pic = await cameraRef.current.takePictureAsync({ base64: true, quality: 1 });
+      setPhoto(pic);
+
+      // Include actual photo width and height with cropInfo
+      const extendedCropInfo = {
+        ...cropInfo,
+        photoWidth: pic.width,
+        photoHeight: pic.height,
+      };
+
       const res = await fetch('http://192.168.68.52:3000/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: pic.base64 }),
+        body: JSON.stringify({ image: pic.base64, cropInfo: extendedCropInfo }),
       });
       const data = await res.json();
-      setText(data.text || '');
-    } catch (e) {
-      console.log('OCR error', e);
+
+      if (data.error) {
+        setError(data.error);
+        Alert.alert('OCR Error', data.error);
+        return;
+      }
+      setOcr({ bestName: data.bestName, bestSize: data.bestSize, text: data.text });
+      setStep('pick');
+    } catch (e: any) {
+      setError(e?.message || String(e));
+      Alert.alert('Capture Error', e?.message || String(e));
     }
   };
 
-  const matchesName = text.toLowerCase().includes(name.toLowerCase());
-  const matchesSize = size ? text.toLowerCase().includes(size.toLowerCase()) : false;
+
+  const onConfirm = (finalName: string, finalSize: string) => {
+    Alert.alert(
+      'Saved',
+      `Name: ${finalName}\nSize: ${finalSize}`,
+      [{
+        text: 'OK', onPress: () => {
+          setStep('photo');
+          setPhoto(null);
+          setOcr({});
+          setManualName('');
+          setManualSize('');
+          setError('');
+        }
+      }]
+    );
+  };
 
   if (!permission) return <Text>Loading permissions…</Text>;
   if (!permission.granted) return <Text>No camera access</Text>;
 
-  return (
-    <View style={styles.container}>
-      {photo ? (
-        <Image source={{ uri: photo.uri }} style={styles.preview} />
-      ) : (
-        <CameraView ref={cameraRef} style={styles.camera} />
-      )}
-      {text ? (
-        <View style={styles.results}>
-          <Text>Extracted: {text}</Text>
-          <Text>{matchesName && matchesSize ? 'Product matches' : 'Product mismatch'}</Text>
+  if (step === 'photo') {
+    return (
+      <View style={styles.container}>
+        {photo ? (
+          <Image source={{ uri: photo.uri }} style={styles.preview} />
+        ) : (
+          <>
+            <CameraView ref={cameraRef} style={styles.camera} />
+            <View style={styles.targetBox} pointerEvents="none" />
+            <Text style={styles.targetText}>Align product label inside the box</Text>
+          </>
+        )}
+        {error ? <Text style={styles.error}>Error: {error}</Text> : null}
+        <Button
+          title={photo ? 'Retake' : 'Capture'}
+          onPress={() => {
+            if (photo) {
+              setPhoto(null);
+              setOcr({});
+            } else {
+              capture();
+            }
+          }}
+        />
+      </View>
+    );
+  }
+
+  if (step === 'pick') {
+    return (
+      <View style={styles.confirm}>
+        <Text style={styles.heading}>Choose the correct product details:</Text>
+        <View style={styles.row}>
+          <View style={styles.option}>
+            <Text style={styles.label}>Barcode/Web Result</Text>
+            <Text>Name: {barcodeName || '(none)'}</Text>
+            <Text>Size: {barcodeSize || '(none)'}</Text>
+            <Button
+              title="Use Barcode/Web"
+              onPress={() => onConfirm(barcodeName, barcodeSize)}
+            />
+          </View>
+          <View style={styles.option}>
+            <Text style={styles.label}>Photo (OCR) Result</Text>
+            <Text>Name: {ocr.bestName || '(none)'}</Text>
+            <Text>Size: {ocr.bestSize || '(none)'}</Text>
+            <Button
+              title="Use Photo (OCR)"
+              onPress={() => onConfirm(ocr.bestName || '', ocr.bestSize || '')}
+            />
+          </View>
         </View>
-      ) : null}
-      <Button title={photo ? 'Retake' : 'Capture'} onPress={() => { photo ? (setPhoto(null), setText('')) : capture(); }} />
+        <Button
+          title="Edit Manually"
+          onPress={() => {
+            setStep('edit');
+            setManualName('');
+            setManualSize('');
+          }}
+        />
+      </View>
+    );
+  }
+
+  if (step === 'edit') {
+    return (
+      <View style={styles.edit}>
+        <Text style={[styles.heading, { color: '#222' }]}>Edit Product Details</Text>
+        <Text style={styles.textLabel}>Name:</Text>
+        <TextInput
+          style={styles.input}
+          value={manualName}
+          onChangeText={setManualName}
+          placeholder="Add item name"
+          placeholderTextColor="#aaa"
+          autoFocus={true}
+        />
+        <Text style={styles.textLabel}>Size:</Text>
+        <TextInput
+          style={styles.input}
+          value={manualSize}
+          onChangeText={setManualSize}
+          placeholder="Add size"
+          placeholderTextColor="#aaa"
+        />
+        <Button
+          title="Save"
+          onPress={() => {
+            if (!manualName.trim()) {
+              Alert.alert("Enter item name");
+              return;
+            }
+            onConfirm(manualName.trim(), manualSize.trim());
+          }}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.done}>
+      <Text>Done!</Text>
+      <Button title="Back" onPress={() => {
+        setStep('photo');
+        setPhoto(null);
+        setOcr({});
+        setManualName('');
+        setManualSize('');
+        setError('');
+      }} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#fff' },
   camera: { flex: 1 },
   preview: { flex: 1 },
-  results: { padding: 16 },
+  error: { color: 'red', padding: 12 },
+  targetBox: {
+    position: 'absolute',
+    left: `${((1 - TARGET_BOX_WIDTH) / 2) * 100}%`,
+    top: `${((1 - TARGET_BOX_HEIGHT) / 2) * 100}%`,
+    width: `${TARGET_BOX_WIDTH * 100}%`,
+    height: `${TARGET_BOX_HEIGHT * 100}%`,
+    borderWidth: 3,
+    borderColor: '#4af',
+    borderRadius: 10,
+    zIndex: 10,
+  },
+  targetText: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    color: '#222',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    fontSize: 15,
+  },
+  confirm: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#fff' },
+  heading: { fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center', color: '#222' },
+  row: { flexDirection: 'row', marginTop: 20 },
+  option: { flex: 1, alignItems: 'center', marginHorizontal: 8, padding: 10, borderWidth: 1, borderRadius: 10, borderColor: '#bbb', backgroundColor: '#f9f9f9' },
+  label: { fontWeight: 'bold', marginBottom: 5, color: '#333' },
+  edit: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#fff' },
+  input: { borderColor: '#888', borderWidth: 1, borderRadius: 8, width: 200, marginBottom: 12, padding: 10, color: '#222', backgroundColor: '#fafafa', fontSize: 16 },
+  textLabel: { alignSelf: 'flex-start', color: '#222', marginLeft: 20, marginBottom: 4, fontWeight: '500' },
+  done: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }
 });

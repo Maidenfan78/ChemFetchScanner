@@ -5,6 +5,8 @@ import puppeteer from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import Tesseract from 'tesseract.js';
+import fs from 'fs';
+import sharp from 'sharp';
 
 const pptr = addExtra(puppeteer);
 pptr.use(StealthPlugin());
@@ -15,7 +17,6 @@ dotenv.config();
 const app = express();
 const supabase = createClient(process.env.SB_URL, process.env.SB_SERVICE_KEY);
 
-// Check for service_role key
 function isServiceRole(key) {
   if (!key) return false;
   const parts = key.split('.');
@@ -28,7 +29,7 @@ function isServiceRole(key) {
   }
 }
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '15mb' }));
 
 // HEADLESS BROWSER SEARCH (Bing)
 async function fetchBingLinksHeadless(barcode) {
@@ -108,12 +109,13 @@ async function scrapeProductInfo(url) {
     const txt = $('body').text() || '';
     const sizeMatch = txt.match(/(\d+(\.\d+)?\s?(ml|g|kg|oz|l))/i);
     const size = sizeMatch ? sizeMatch[0] : '';
-    const sdsLinks = $('a').map((i, a) => { const $a = $(a); const href = $a.attr('href')||''; const text = $a.text()||''; if (/\.pdf$/i.test(href)&&/sds|msds|safety/i.test(href+text)) return href.startsWith('http')?href:new URL(href,url).href; }).get();
-    const sdsUrl = sdsLinks[0]||'';
+    const sdsLinks = $('a').map((i, a) => { const $a = $(a); const href = $a.attr('href') || ''; const text = $a.text() || ''; if (/\.pdf$/i.test(href) && /sds|msds|safety/i.test(href + text)) return href.startsWith('http') ? href : new URL(href, url).href; }).get();
+    const sdsUrl = sdsLinks[0] || '';
     return { url, name, manufacturer, size, sdsUrl };
   } catch (e) { console.warn(`Scrape error ${url}:`, e.message); return null; }
 }
 
+// --- SCAN ENDPOINT ---
 app.post('/scan', async (req, res) => {
   const { code } = req.body;
 
@@ -147,16 +149,85 @@ app.post('/scan', async (req, res) => {
   res.json({ code, scraped });
 });
 
+// --- OCR ENDPOINT ---
+// Now returns best guess for name and size!
+// --- OCR ENDPOINT --- Now crops to the target box!
 app.post('/ocr', async (req, res) => {
-  const { image } = req.body;
+  const { image, cropInfo } = req.body;
   if (!image) return res.status(400).json({ error: 'Missing image' });
+
   try {
-    const { data: { text } } = await Tesseract.recognize(Buffer.from(image, 'base64'), 'eng');
-    res.json({ text });
+    const buffer = Buffer.from(image, 'base64');
+    const filename = `ocr_${Date.now()}.jpg`;
+    fs.writeFileSync(filename, buffer);
+
+    let processed = buffer;
+    if (cropInfo && cropInfo.width && cropInfo.height && cropInfo.photoWidth && cropInfo.photoHeight) {
+      // Map screen box to photo
+      const scaleX = cropInfo.photoWidth / cropInfo.screenWidth;
+      const scaleY = cropInfo.photoHeight / cropInfo.screenHeight;
+      const extract = {
+        left: Math.round(cropInfo.left * scaleX),
+        top: Math.round(cropInfo.top * scaleY),
+        width: Math.round(cropInfo.width * scaleX),
+        height: Math.round(cropInfo.height * scaleY)
+      };
+      processed = await sharp(buffer)
+        .extract(extract)
+        .greyscale()
+        .normalize()
+        .sharpen()
+        .toBuffer();
+      fs.writeFileSync(`preprocessed_${Date.now()}.jpg`, processed);
+    } else {
+      // Preprocess full image if no crop info
+      processed = await sharp(buffer)
+        .greyscale()
+        .normalize()
+        .sharpen()
+        .toBuffer();
+      fs.writeFileSync(`preprocessed_${Date.now()}.jpg`, processed);
+    }
+
+    // OCR
+    const result = await Tesseract.recognize(processed, 'eng', { logger: m => console.log(m) });
+
+    // Use blocks and lines to guess "product name" (largest area)
+    let bestLine = '';
+    let bestHeight = 0;
+    let bestSize = '';
+    const allTextLines = [];
+
+    if (result.data && Array.isArray(result.data.lines)) {
+      result.data.lines.forEach(line => {
+        const text = (line.text || '').trim();
+        allTextLines.push(text);
+        if (line.bbox && (line.bbox.y1 - line.bbox.y0) > bestHeight && text.length > 2) {
+          bestHeight = line.bbox.y1 - line.bbox.y0;
+          bestLine = text;
+        }
+        if (!bestSize) {
+          const m = text.match(/(\d+(\.\d+)?\s?(ml|g|kg|oz|l|L|ML|KG|G|OZ))/i);
+          if (m) bestSize = m[0];
+        }
+      });
+    }
+
+    if (!bestLine) bestLine = (result.data && result.data.text || '').split('\n').filter(l => l.trim().length > 2)[0] || '';
+    if (!bestSize) {
+      const m = (result.data && result.data.text || '').match(/(\d+(\.\d+)?\s?(ml|g|kg|oz|l|L|ML|KG|G|OZ))/i);
+      if (m) bestSize = m[0];
+    }
+
+    res.json({
+      bestName: bestLine,
+      bestSize,
+      text: result.data.text
+    });
   } catch (e) {
+    console.log('[OCR] Error during OCR:', e);
     res.status(500).json({ error: e.message });
   }
 });
-
-app.listen(3000,()=>console.log('Listening on 3000'));
+app.listen(3000, () => console.log('Listening on 3000'));
 console.log('Supabase:', process.env.SB_URL, 'ServiceRole?', isServiceRole(process.env.SB_SERVICE_KEY));
