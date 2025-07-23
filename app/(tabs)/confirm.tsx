@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const TARGET_BOX_WIDTH = 0.7;
-const TARGET_BOX_HEIGHT = 0.15;
+const TARGET_BOX_HEIGHT = 0.3;
 
 export default function Confirm() {
   const { name: barcodeName = '', size: barcodeSize = '', code = '' } = useLocalSearchParams<{ name: string; size: string; code: string }>();

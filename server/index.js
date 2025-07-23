@@ -4,11 +4,11 @@ import dotenv from 'dotenv';
 import puppeteer from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import Tesseract from 'tesseract.js';
 import fs from 'fs';
 import sharp from 'sharp';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import FormData from 'form-data';
 
 const pptr = addExtra(puppeteer);
 pptr.use(StealthPlugin());
@@ -175,9 +175,9 @@ app.post('/scan', async (req, res) => {
   res.json({ code, scraped });
 });
 
-// --- OCR ENDPOINT ---
-// Now returns best guess for name and size!
-// --- OCR ENDPOINT --- Now crops to the target box!
+// --- OCR ENDPOINT --- (calls Python microservice)
+const CROP_PADDING_RATIO = 0.08; // 8% padding
+
 app.post('/ocr', async (req, res) => {
   const { image, cropInfo } = req.body;
   if (!image) return res.status(400).json({ error: 'Missing image' });
@@ -189,104 +189,82 @@ app.post('/ocr', async (req, res) => {
 
     let processed = buffer;
     if (cropInfo && cropInfo.width && cropInfo.height && cropInfo.photoWidth && cropInfo.photoHeight) {
-      // Map screen box to photo. Account for aspect ratio differences
-      // between the camera preview and the captured image. When the
-      // preview is letterboxed, the crop coordinates need to be
-      // adjusted by the offset introduced by the letterboxing.
+      const photoAR = cropInfo.photoWidth / cropInfo.photoHeight;
+      const screenAR = cropInfo.screenWidth / cropInfo.screenHeight;
 
-      // Calculate how the preview fits into the actual photo
-      const photoRatio = cropInfo.photoWidth / cropInfo.photoHeight;
-      const screenRatio = cropInfo.screenWidth / cropInfo.screenHeight;
-      let offsetX = 0;
-      let offsetY = 0;
-      let effectiveWidth = cropInfo.screenWidth;
-      let effectiveHeight = cropInfo.screenHeight;
+      let drawWidth, drawHeight, drawLeft, drawTop;
 
-      if (Math.abs(photoRatio - screenRatio) > 0.01) {
-        if (photoRatio > screenRatio) {
-          // Photo is wider than the preview area - black bars top/bottom
-          effectiveHeight = cropInfo.screenWidth / photoRatio;
-          offsetY = (cropInfo.screenHeight - effectiveHeight) / 2;
-        } else {
-          // Photo is taller than the preview area - bars left/right
-          effectiveWidth = cropInfo.screenHeight * photoRatio;
-          offsetX = (cropInfo.screenWidth - effectiveWidth) / 2;
-        }
+      if (photoAR > screenAR) {
+        drawWidth = cropInfo.screenWidth;
+        drawHeight = drawWidth / photoAR;
+        drawLeft = 0;
+        drawTop = (cropInfo.screenHeight - drawHeight) / 2;
+      } else {
+        drawHeight = cropInfo.screenHeight;
+        drawWidth = drawHeight * photoAR;
+        drawTop = 0;
+        drawLeft = (cropInfo.screenWidth - drawWidth) / 2;
       }
 
-      const scaleX = cropInfo.photoWidth / effectiveWidth;
-      const scaleY = cropInfo.photoHeight / effectiveHeight;
-      const extract = {
-        left: Math.round((cropInfo.left - offsetX) * scaleX),
-        top: Math.round((cropInfo.top - offsetY) * scaleY),
-        width: Math.round(cropInfo.width * scaleX),
-        height: Math.round(cropInfo.height * scaleY)
-      };
+      const xRel = (cropInfo.left - drawLeft) / drawWidth;
+      const yRel = (cropInfo.top - drawTop) / drawHeight;
+      const wRel = cropInfo.width / drawWidth;
+      const hRel = cropInfo.height / drawHeight;
+
+      let left = Math.round(xRel * cropInfo.photoWidth);
+      let top = Math.round(yRel * cropInfo.photoHeight);
+      let width = Math.round(wRel * cropInfo.photoWidth);
+      let height = Math.round(hRel * cropInfo.photoHeight);
+
+      const pad = Math.round(height * CROP_PADDING_RATIO);
+      left = Math.max(left - pad, 0);
+      top = Math.max(top - pad, 0);
+      width = Math.min(width + pad * 2, cropInfo.photoWidth - left);
+      height = Math.min(height + pad * 2, cropInfo.photoHeight - top);
+
+      const extract = { left, top, width, height };
+      console.log('Crop extract:', extract);
+      console.log('Python OCR response:', ocrRes.data);
+
+
       processed = await sharp(buffer)
         .rotate()
         .extract(extract)
         .greyscale()
         .normalize()
+        .median(1)
         .sharpen()
         .resize({ width: 1200, withoutEnlargement: true })
-        .median(1)
-        .threshold()
         .toBuffer();
+
       fs.writeFileSync(`preprocessed_${Date.now()}.jpg`, processed);
     } else {
-      // Preprocess full image if no crop info
       processed = await sharp(buffer)
         .rotate()
         .greyscale()
         .normalize()
+        .median(1)
         .sharpen()
         .resize({ width: 1200, withoutEnlargement: true })
-        .median(1)
-        .threshold()
         .toBuffer();
       fs.writeFileSync(`preprocessed_${Date.now()}.jpg`, processed);
     }
 
-    // OCR
-    const result = await Tesseract.recognize(processed, 'eng', {
-      logger: m => console.log(m),
-      langPath: __dirname,
-      tessedit_pageseg_mode: 6,
-      preserve_interword_spaces: '1'
+    // ---- Send processed image to Python microservice! ----
+    const form = new FormData();
+    form.append('image', processed, {
+      filename: 'crop.jpg',
+      contentType: 'image/jpeg'
     });
 
-    // Use blocks and lines to guess "product name" (largest area)
-    let bestLine = '';
-    let bestHeight = 0;
-    let bestSize = '';
-    const allTextLines = [];
+    const ocrRes = await axios.post(
+      'http://localhost:5001/ocr',
+      form,
+      { headers: form.getHeaders(), timeout: 60000 }
+    );
 
-    if (result.data && Array.isArray(result.data.lines)) {
-      result.data.lines.forEach(line => {
-        const text = (line.text || '').trim();
-        allTextLines.push(text);
-        if (line.bbox && (line.bbox.y1 - line.bbox.y0) > bestHeight && text.length > 2) {
-          bestHeight = line.bbox.y1 - line.bbox.y0;
-          bestLine = text;
-        }
-        if (!bestSize) {
-          const m = text.match(/(\d+(\.\d+)?\s?(ml|g|kg|oz|l|L|ML|KG|G|OZ))/i);
-          if (m) bestSize = m[0];
-        }
-      });
-    }
+    res.json(ocrRes.data);
 
-    if (!bestLine) bestLine = (result.data && result.data.text || '').split('\n').filter(l => l.trim().length > 2)[0] || '';
-    if (!bestSize) {
-      const m = (result.data && result.data.text || '').match(/(\d+(\.\d+)?\s?(ml|g|kg|oz|l|L|ML|KG|G|OZ))/i);
-      if (m) bestSize = m[0];
-    }
-
-    res.json({
-      bestName: bestLine,
-      bestSize,
-      text: result.data.text
-    });
   } catch (e) {
     console.log('[OCR] Error during OCR:', e);
     res.status(500).json({ error: e.message });
