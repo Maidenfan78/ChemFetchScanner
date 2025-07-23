@@ -22,15 +22,16 @@ export default function Confirm() {
   useEffect(() => { requestPermission(); }, []);
 
   const cameraRef = useRef<CameraView>(null);
+  const [cameraLayout, setCameraLayout] = useState({ width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
 
-  const cropInfo = {
-    left: Math.round((1 - TARGET_BOX_WIDTH) / 2 * SCREEN_WIDTH),
-    top: Math.round((1 - TARGET_BOX_HEIGHT) / 2 * SCREEN_HEIGHT),
-    width: Math.round(SCREEN_WIDTH * TARGET_BOX_WIDTH),
-    height: Math.round(SCREEN_HEIGHT * TARGET_BOX_HEIGHT),
-    screenWidth: SCREEN_WIDTH,
-    screenHeight: SCREEN_HEIGHT
-  };
+  const getCropInfo = () => ({
+    left: Math.round((1 - TARGET_BOX_WIDTH) / 2 * cameraLayout.width),
+    top: Math.round((1 - TARGET_BOX_HEIGHT) / 2 * cameraLayout.height),
+    width: Math.round(cameraLayout.width * TARGET_BOX_WIDTH),
+    height: Math.round(cameraLayout.height * TARGET_BOX_HEIGHT),
+    screenWidth: cameraLayout.width,
+    screenHeight: cameraLayout.height
+  });
 
   const capture = async () => {
     setError('');
@@ -43,7 +44,7 @@ export default function Confirm() {
 
       // Include actual photo width and height with cropInfo
       const extendedCropInfo = {
-        ...cropInfo,
+        ...getCropInfo(),
         photoWidth: pic.width,
         photoHeight: pic.height,
       };
@@ -96,7 +97,14 @@ export default function Confirm() {
           <Image source={{ uri: photo.uri }} style={styles.preview} />
         ) : (
           <>
-            <CameraView ref={cameraRef} style={styles.camera} />
+            <CameraView
+              ref={cameraRef}
+              style={styles.camera}
+              onLayout={e => {
+                const { width, height } = e.nativeEvent.layout;
+                setCameraLayout({ width, height });
+              }}
+            />
             <View style={styles.targetBox} pointerEvents="none" />
             <Text style={styles.targetText}>Align product label inside the box</Text>
           </>
