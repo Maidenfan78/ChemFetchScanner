@@ -224,6 +224,9 @@ app.post('/ocr', async (req, res) => {
         .greyscale()
         .normalize()
         .sharpen()
+        .resize({ width: 1200, withoutEnlargement: true })
+        .median(1)
+        .threshold()
         .toBuffer();
       fs.writeFileSync(`preprocessed_${Date.now()}.jpg`, processed);
     } else {
@@ -233,12 +236,19 @@ app.post('/ocr', async (req, res) => {
         .greyscale()
         .normalize()
         .sharpen()
+        .resize({ width: 1200, withoutEnlargement: true })
+        .median(1)
+        .threshold()
         .toBuffer();
       fs.writeFileSync(`preprocessed_${Date.now()}.jpg`, processed);
     }
 
     // OCR
-    const result = await Tesseract.recognize(processed, 'eng', { logger: m => console.log(m) });
+    const result = await Tesseract.recognize(processed, 'eng', {
+      logger: m => console.log(m),
+      tessedit_pageseg_mode: 6,
+      preserve_interword_spaces: '1'
+    });
 
     // Use blocks and lines to guess "product name" (largest area)
     let bestLine = '';
