@@ -173,6 +173,7 @@ app.post('/ocr', async (req, res) => {
         height: Math.round(cropInfo.height * scaleY)
       };
       processed = await sharp(buffer)
+        .rotate()
         .extract(extract)
         .greyscale()
         .normalize()
@@ -182,6 +183,7 @@ app.post('/ocr', async (req, res) => {
     } else {
       // Preprocess full image if no crop info
       processed = await sharp(buffer)
+        .rotate()
         .greyscale()
         .normalize()
         .sharpen()
