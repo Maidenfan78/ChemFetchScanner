@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
 import cv2
 import numpy as np
-import pytesseract
+from paddleocr import PaddleOCR
 
 app = Flask(__name__)
+# Initialize once for efficiency (set lang to 'en' or another if needed)
+ocr_model = PaddleOCR(use_angle_cls=True, lang='en')
 
 def preprocess_image(img_bytes):
     npimg = np.frombuffer(img_bytes, np.uint8)
@@ -27,43 +29,54 @@ def preprocess_image(img_bytes):
     (h, w) = thresh.shape
     M = cv2.getRotationMatrix2D((w // 2, h // 2), angle, 1.0)
     deskewed = cv2.warpAffine(thresh, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-    return deskewed
-
-def extract_main_label(processed):
-    d = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, config='--psm 6')
-    n = len(d['text'])
-    max_height = 0
-    main_line = ''
-    for i in range(n):
-        txt = d['text'][i].strip()
-        if len(txt) < 2: continue
-        height = int(d['height'][i])
-        if height > max_height:
-            max_height = height
-            main_line = txt
-    return main_line
+    # Convert back to 3-channel for PaddleOCR (expects color)
+    processed = cv2.cvtColor(deskewed, cv2.COLOR_GRAY2BGR)
+    return processed
 
 @app.route('/ocr', methods=['POST'])
 def ocr():
+    print("Request received at /ocr")
     if 'image' not in request.files:
+        print("No image uploaded")
         return jsonify({'error': 'No image uploaded'}), 400
     img_file = request.files['image']
     img_bytes = img_file.read()
 
-    processed = preprocess_image(img_bytes)
-    # Get OCR data with bounding boxes
-    d = pytesseract.image_to_data(processed, output_type=pytesseract.Output.DICT, config='--psm 6')
-    n = len(d['text'])
-    all_lines = []
-    for i in range(n):
-        txt = d['text'][i].strip()
-        height = int(d['height'][i])
-        if len(txt) > 0:
-            all_lines.append({'text': txt, 'height': height})
-    raw_text = pytesseract.image_to_string(processed, config='--psm 6')
+    try:
+        print("Preprocessing image...")
+        processed = preprocess_image(img_bytes)
+        print("Image preprocessed.")
+    except Exception as e:
+        print(f"Image processing failed: {e}")
+        return jsonify({'error': f'Image processing failed: {e}'}), 400
+
+    try:
+        print("Running OCR...")
+        result = ocr_model.predict(processed)
+        print("OCR complete.")
+        print("PaddleOCR result:", result)
+    except Exception as e:
+        print(f"OCR failed: {e}")
+        return jsonify({'error': f'OCR failed: {e}'}), 500
+
+    lines = []
+    full_text = []
+    result_dict = result[0]  # Always a list with one dict for 1 image
+
+    rec_texts = result_dict.get('rec_texts', [])
+    rec_scores = result_dict.get('rec_scores', [])
+
+    for txt, conf in zip(rec_texts, rec_scores):
+        lines.append({
+            'text': txt,
+            'confidence': float(conf)
+        })
+        full_text.append(txt)
+
+    print("Returning results.")
     return jsonify({
-        'lines': all_lines,
-        'text': raw_text
+        'lines': lines,
+        'text': '\n'.join(full_text)
     })
 
 
