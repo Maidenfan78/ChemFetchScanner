@@ -224,7 +224,6 @@ app.post('/ocr', async (req, res) => {
 
       const extract = { left, top, width, height };
       console.log('Crop extract:', extract);
-      console.log('Python OCR response:', ocrRes.data);
 
 
       processed = await sharp(buffer)
@@ -262,6 +261,7 @@ app.post('/ocr', async (req, res) => {
       form,
       { headers: form.getHeaders(), timeout: 60000 }
     );
+    console.log('Python OCR response:', ocrRes.data);
 
     res.json(ocrRes.data);
 
