@@ -185,12 +185,36 @@ app.post('/ocr', async (req, res) => {
 
     let processed = buffer;
     if (cropInfo && cropInfo.width && cropInfo.height && cropInfo.photoWidth && cropInfo.photoHeight) {
-      // Map screen box to photo
-      const scaleX = cropInfo.photoWidth / cropInfo.screenWidth;
-      const scaleY = cropInfo.photoHeight / cropInfo.screenHeight;
+      // Map screen box to photo. Account for aspect ratio differences
+      // between the camera preview and the captured image. When the
+      // preview is letterboxed, the crop coordinates need to be
+      // adjusted by the offset introduced by the letterboxing.
+
+      // Calculate how the preview fits into the actual photo
+      const photoRatio = cropInfo.photoWidth / cropInfo.photoHeight;
+      const screenRatio = cropInfo.screenWidth / cropInfo.screenHeight;
+      let offsetX = 0;
+      let offsetY = 0;
+      let effectiveWidth = cropInfo.screenWidth;
+      let effectiveHeight = cropInfo.screenHeight;
+
+      if (Math.abs(photoRatio - screenRatio) > 0.01) {
+        if (photoRatio > screenRatio) {
+          // Photo is wider than the preview area - black bars top/bottom
+          effectiveHeight = cropInfo.screenWidth / photoRatio;
+          offsetY = (cropInfo.screenHeight - effectiveHeight) / 2;
+        } else {
+          // Photo is taller than the preview area - bars left/right
+          effectiveWidth = cropInfo.screenHeight * photoRatio;
+          offsetX = (cropInfo.screenWidth - effectiveWidth) / 2;
+        }
+      }
+
+      const scaleX = cropInfo.photoWidth / effectiveWidth;
+      const scaleY = cropInfo.photoHeight / effectiveHeight;
       const extract = {
-        left: Math.round(cropInfo.left * scaleX),
-        top: Math.round(cropInfo.top * scaleY),
+        left: Math.round((cropInfo.left - offsetX) * scaleX),
+        top: Math.round((cropInfo.top - offsetY) * scaleY),
         width: Math.round(cropInfo.width * scaleX),
         height: Math.round(cropInfo.height * scaleY)
       };
