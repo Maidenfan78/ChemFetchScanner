@@ -61,7 +61,29 @@ export default function Confirm() {
         Alert.alert('OCR Error', data.error);
         return;
       }
-      setOcr({ bestName: data.bestName, bestSize: data.bestSize, text: data.text });
+
+      let bestName = '';
+      let bestSize = '';
+
+      if (Array.isArray(data.lines)) {
+        for (const line of data.lines) {
+          const txt = String(line.text || '').trim();
+          if (txt.length > bestName.length) {
+            bestName = txt;
+          }
+          if (!bestSize) {
+            const m = txt.match(/(\d+(?:\.\d+)?\s?(?:ml|mL|g|kg|oz|l))/);
+            if (m) bestSize = m[0];
+          }
+        }
+      }
+
+      if (!bestSize && typeof data.text === 'string') {
+        const m = data.text.match(/(\d+(?:\.\d+)?\s?(?:ml|mL|g|kg|oz|l))/);
+        if (m) bestSize = m[0];
+      }
+
+      setOcr({ bestName, bestSize, text: data.text });
       setStep('pick');
     } catch (e: any) {
       setError(e?.message || String(e));
