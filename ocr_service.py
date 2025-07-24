@@ -102,7 +102,6 @@ def ocr():
         return jsonify({'error': f'OCR failed: {e}'}), 500
 
     lines: List[Dict[str, Any]] = []
-    full_text: List[str] = []
 
     for item in result:
         if isinstance(item, dict):
@@ -126,7 +125,6 @@ def ocr():
                     'box': np.asarray(box, float).reshape(-1, 2).tolist(),
                     'area': box_area(box)
                 })
-                full_text.append(txt)
 
         elif isinstance(item, (list, tuple)) and len(item) >= 2:
             box, (txt, conf) = item[0], item[1]
@@ -136,14 +134,25 @@ def ocr():
                 'box': np.asarray(box, float).reshape(-1, 2).tolist(),
                 'area': box_area(box)
             })
-            full_text.append(txt)
+
+    if lines:
+        max_area = max(l['area'] for l in lines)
+        area_threshold = 0.3 * max_area
+        filtered = [l for l in lines if l['area'] >= area_threshold]
+    else:
+        filtered = []
+
+    full_text: List[str] = [l['text'] for l in filtered]
 
     payload: Dict[str, Any] = {
-        'lines': lines,
+        'lines': filtered,
         'text': '\n'.join(full_text)
     }
     if debug_mode:
-        payload['debug'] = {'n_lines': len(lines)}
+        payload['debug'] = {
+            'n_lines': len(lines),
+            'n_filtered': len(filtered)
+        }
 
     return jsonify(payload), 200
 
