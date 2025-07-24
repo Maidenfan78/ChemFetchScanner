@@ -40,6 +40,58 @@ def box_area(box: list | np.ndarray) -> float:
 
     return area
 
+def find_largest_text_group(lines: list[dict], dist: float = 50.0) -> dict | None:
+    """Cluster nearby text lines and return the largest group.
+
+    This helps pick multi-line titles where words are split across lines.
+    The ``dist`` parameter controls how close bounding box centers must be in
+    pixels to be considered part of the same group.
+    """
+
+    clusters: list[dict] = []
+    for line in lines:
+        box = np.asarray(line.get("box"), dtype=float)
+        if box.size == 0:
+            continue
+        center = box.reshape(-1, 2).mean(axis=0)
+        placed = False
+        for cl in clusters:
+            if np.linalg.norm(center - cl["center"]) <= dist:
+                cl["lines"].append(line)
+                cl["boxes"].append(box)
+                cl["center"] = np.mean(np.vstack(cl["boxes"]), axis=0)
+                placed = True
+                break
+        if not placed:
+            clusters.append({"lines": [line], "boxes": [box], "center": center})
+
+    best = None
+    for cl in clusters:
+        pts = np.vstack([b.reshape(-1, 2) for b in cl["boxes"]])
+        x_min, y_min = pts.min(axis=0)
+        x_max, y_max = pts.max(axis=0)
+        area = float((x_max - x_min) * (y_max - y_min))
+        ordered = sorted(
+            cl["lines"], key=lambda l: np.min(np.asarray(l["box"], dtype=float)[:, 1])
+        )
+        text = " ".join(l["text"] for l in ordered)
+        conf = float(np.mean([l["confidence"] for l in cl["lines"]]))
+        result = {
+            "text": text,
+            "confidence": conf,
+            "box": [
+                [float(x_min), float(y_min)],
+                [float(x_max), float(y_min)],
+                [float(x_max), float(y_max)],
+                [float(x_min), float(y_max)],
+            ],
+            "area": area,
+        }
+        if best is None or area > best["area"]:
+            best = result
+
+    return best
+
 def preprocess_image(img_bytes):
     npimg = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
@@ -145,11 +197,13 @@ def ocr():
                     max_area = area
                     largest_line = entry
 
+    largest_group = find_largest_text_group(lines)
+
     print("Returning results.")
     return jsonify({
         'lines': lines,
         'text': '\n'.join(full_text),
-        'largest_line': largest_line
+        'largest_line': largest_group or largest_line
     })
 
 
