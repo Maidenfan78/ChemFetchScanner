@@ -40,30 +40,38 @@ def box_area(box: list | np.ndarray) -> float:
 
     return area
 
-def find_largest_text_group(lines: list[dict], dist: float = 50.0) -> dict | None:
-    """Cluster nearby text lines and return the largest group.
+def find_largest_text_group(lines: list[dict], dist_ratio: float = 1.5) -> dict | None:
+    """Cluster lines that are vertically close into multi-line groups.
 
-    This helps pick multi-line titles where words are split across lines.
-    The ``dist`` parameter controls how close bounding box centers must be in
-    pixels to be considered part of the same group.
+    The previous implementation clustered by fixed pixel distance which often
+    failed when large fonts produced spacing greater than the threshold. This
+    version scales the distance by the average line height so that headings like
+    ``"Glen"`` and ``"20"`` are merged even if they are spaced further apart than
+    smaller text.
     """
+
+    def box_stats(box: np.ndarray) -> tuple[np.ndarray, float]:
+        pts = box.reshape(-1, 2).astype(float)
+        center = pts.mean(axis=0)
+        height = pts[:, 1].max() - pts[:, 1].min()
+        return center, height
 
     clusters: list[dict] = []
     for line in lines:
         box = np.asarray(line.get("box"), dtype=float)
         if box.size == 0:
             continue
-        center = box.reshape(-1, 2).mean(axis=0)
+        center, height = box_stats(box)
         placed = False
         for cl in clusters:
-            if np.linalg.norm(center - cl["center"]) <= dist:
+            if np.linalg.norm(center - cl["center"]) <= dist_ratio * max(height, cl["avg_height"]):
                 cl["lines"].append(line)
                 cl["boxes"].append(box)
-                cl["center"] = np.mean(np.vstack(cl["boxes"]), axis=0)
+                cl["center"], cl["avg_height"] = box_stats(np.vstack(cl["boxes"]))
                 placed = True
                 break
         if not placed:
-            clusters.append({"lines": [line], "boxes": [box], "center": center})
+            clusters.append({"lines": [line], "boxes": [box], "center": center, "avg_height": height})
 
     best = None
     for cl in clusters:
