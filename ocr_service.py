@@ -52,7 +52,7 @@ def ocr():
 
     try:
         print("Running OCR...")
-        result = ocr_model.predict(processed)
+        result = ocr_model.ocr(processed, cls=True)
         print("OCR complete.")
         print("PaddleOCR result:", result)
     except Exception as e:
@@ -61,17 +61,14 @@ def ocr():
 
     lines = []
     full_text = []
-    result_dict = result[0]  # Always a list with one dict for 1 image
-
-    rec_texts = result_dict.get('rec_texts', [])
-    rec_scores = result_dict.get('rec_scores', [])
-
-    for txt, conf in zip(rec_texts, rec_scores):
-        lines.append({
-            'text': txt,
-            'confidence': float(conf)
-        })
-        full_text.append(txt)
+    for line in result:
+        if len(line) >= 2:
+            txt, conf = line[1]
+            lines.append({
+                'text': txt,
+                'confidence': float(conf)
+            })
+            full_text.append(txt)
 
     print("Returning results.")
     return jsonify({
