@@ -7,6 +7,11 @@ app = Flask(__name__)
 # Initialize once for efficiency (set lang to 'en' or another if needed)
 ocr_model = PaddleOCR(use_angle_cls=True, lang='en')
 
+def box_area(box):
+    """Return the area of a quadrilateral box."""
+    pts = np.array(box, dtype="float32")
+    return float(cv2.contourArea(pts))
+
 def preprocess_image(img_bytes):
     npimg = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
@@ -69,25 +74,50 @@ def ocr():
 
     lines = []
     full_text = []
+    largest_line = None
+    max_area = -1.0
 
     for line in result:
         if isinstance(line, dict):
+            boxes = line.get('rec_boxes', []) or line.get('boxes', [])
             texts = line.get('rec_texts', [])
             scores = line.get('rec_scores', [])
-            for txt, conf in zip(texts, scores):
-                lines.append({'text': txt, 'confidence': float(conf)})
+            for box, txt, conf in zip(boxes, texts, scores):
+                area = box_area(box)
+                entry = {
+                    'text': txt,
+                    'confidence': float(conf),
+                    'box': [list(map(float, pt)) for pt in box],
+                    'area': area
+                }
+                lines.append(entry)
                 full_text.append(txt)
+                if area > max_area:
+                    max_area = area
+                    largest_line = entry
         elif isinstance(line, (list, tuple)) and len(line) >= 2:
+            box = line[0]
             text_info = line[1]
             if isinstance(text_info, (list, tuple)) and len(text_info) >= 2:
                 txt, conf = text_info[0], text_info[1]
-                lines.append({'text': txt, 'confidence': float(conf)})
+                area = box_area(box)
+                entry = {
+                    'text': txt,
+                    'confidence': float(conf),
+                    'box': [list(map(float, pt)) for pt in box],
+                    'area': area
+                }
+                lines.append(entry)
                 full_text.append(txt)
+                if area > max_area:
+                    max_area = area
+                    largest_line = entry
 
     print("Returning results.")
     return jsonify({
         'lines': lines,
-        'text': '\n'.join(full_text)
+        'text': '\n'.join(full_text),
+        'largest_line': largest_line
     })
 
 
