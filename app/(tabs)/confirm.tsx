@@ -7,6 +7,7 @@ import {
   Image,
   Alert,
   TextInput,
+  Modal,
   Dimensions,
   PanResponder,
   PanResponderGestureState,
@@ -28,6 +29,9 @@ export default function Confirm() {
   const [error, setError] = useState('');
   const [manualName, setManualName] = useState('');
   const [manualSize, setManualSize] = useState('');
+  const [sizePromptVisible, setSizePromptVisible] = useState(false);
+  const [pendingName, setPendingName] = useState('');
+  const [pendingSize, setPendingSize] = useState('');
   const router = useRouter();
 
   useEffect(() => { requestPermission(); }, []);
@@ -200,12 +204,15 @@ export default function Confirm() {
       let bestName = '';
       let bestSize = '';
 
+      if (data?.predominant?.text) {
+        bestName = String(data.predominant.text).replace(/\n+/g, ' ').trim();
+      } else if (typeof data.text === 'string') {
+        bestName = data.text.replace(/\n+/g, ' ').trim();
+      }
+
       if (Array.isArray(data.lines)) {
         for (const line of data.lines) {
           const txt = String(line.text || '').trim();
-          if (txt.length > bestName.length) {
-            bestName = txt;
-          }
           if (!bestSize) {
             const m = txt.match(/(\d+(?:\.\d+)?\s?(?:ml|mL|g|kg|oz|l))/);
             if (m) bestSize = m[0];
@@ -227,12 +234,12 @@ export default function Confirm() {
   };
 
 
-  const onConfirm = async (finalName: string, finalSize: string) => {
+  const saveItem = async (name: string, size: string) => {
     try {
       await fetch('http://192.168.68.52:3000/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, name: finalName, size: finalSize }),
+        body: JSON.stringify({ code, name, size }),
       });
     } catch (e) {
       console.error('Save error', e);
@@ -240,7 +247,7 @@ export default function Confirm() {
 
     Alert.alert(
       'Saved',
-      `Name: ${finalName}\nSize: ${finalSize}`,
+      `Name: ${name}\nSize: ${size}`,
       [{
         text: 'OK', onPress: () => {
           setStep('photo');
@@ -254,11 +261,46 @@ export default function Confirm() {
     );
   };
 
+  const onConfirm = (finalName: string, finalSize: string) => {
+    if (!finalSize.trim()) {
+      setPendingName(finalName);
+      setPendingSize('');
+      setSizePromptVisible(true);
+      return;
+    }
+    saveItem(finalName, finalSize);
+  };
+
+  const sizePrompt = (
+    <Modal
+      transparent
+      visible={sizePromptVisible}
+      animationType="fade"
+      onRequestClose={() => setSizePromptVisible(false)}
+    >
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalLabel}>Enter size for {pendingName}</Text>
+          <TextInput
+            style={styles.input}
+            value={pendingSize}
+            onChangeText={setPendingSize}
+            placeholder="Size"
+            placeholderTextColor="#aaa"
+          />
+          <Button title="Save" onPress={() => { setSizePromptVisible(false); saveItem(pendingName, pendingSize.trim()); }} />
+          <Button title="Cancel" onPress={() => setSizePromptVisible(false)} />
+        </View>
+      </View>
+    </Modal>
+  );
+
   if (!permission) return <Text>Loading permissions…</Text>;
   if (!permission.granted) return <Text>No camera access</Text>;
 
   if (step === 'photo') {
     return (
+      <>
       <View style={styles.container}>
         {photo ? (
           <Image source={{ uri: photo.uri }} style={styles.preview} />
@@ -291,11 +333,14 @@ export default function Confirm() {
           }}
         />
       </View>
+      {sizePrompt}
+      </>
     );
   }
 
   if (step === 'crop' && photo) {
     return (
+      <>
       <View style={styles.container}>
         <Image
           source={{ uri: photo.uri }}
@@ -339,11 +384,14 @@ export default function Confirm() {
         {error ? <Text style={styles.error}>Error: {error}</Text> : null}
         <Button title="Run OCR" onPress={runOcr} />
       </View>
+      {sizePrompt}
+      </>
     );
   }
 
   if (step === 'pick') {
     return (
+      <>
       <View style={styles.confirm}>
         <Text style={styles.heading}>Choose the correct product details:</Text>
         <View style={styles.row}>
@@ -375,11 +423,14 @@ export default function Confirm() {
           }}
         />
       </View>
+      {sizePrompt}
+      </>
     );
   }
 
   if (step === 'edit') {
     return (
+      <>
       <View style={styles.edit}>
         <Text style={[styles.heading, { color: '#222' }]}>Edit Product Details</Text>
         <Text style={styles.textLabel}>Name:</Text>
@@ -410,10 +461,13 @@ export default function Confirm() {
           }}
         />
       </View>
+      {sizePrompt}
+      </>
     );
   }
 
   return (
+    <>
     <View style={styles.done}>
       <Text>Done!</Text>
       <Button title="Back" onPress={() => {
@@ -425,6 +479,8 @@ export default function Confirm() {
         setError('');
       }} />
     </View>
+    {sizePrompt}
+    </>
   );
 }
 
@@ -487,5 +543,18 @@ const styles = StyleSheet.create({
   edit: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#fff' },
   input: { borderColor: '#888', borderWidth: 1, borderRadius: 8, width: 200, marginBottom: 12, padding: 10, color: '#222', backgroundColor: '#fafafa', fontSize: 16 },
   textLabel: { alignSelf: 'flex-start', color: '#222', marginLeft: 20, marginBottom: 4, fontWeight: '500' },
-  done: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }
+  done: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 8,
+    width: 250,
+  },
+  modalLabel: { marginBottom: 8, color: '#222', textAlign: 'center' }
 });
