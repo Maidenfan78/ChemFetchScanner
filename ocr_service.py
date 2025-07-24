@@ -89,7 +89,9 @@ def ocr():
 
     for line in result:
         if isinstance(line, dict):
-            boxes = line.get('rec_boxes', []) or line.get('boxes', [])
+            boxes = line.get('rec_boxes')
+            if boxes is None or len(boxes) == 0:
+                boxes = line.get('boxes', [])
             texts = line.get('rec_texts', [])
             scores = line.get('rec_scores', [])
             for box, txt, conf in zip(boxes, texts, scores):
