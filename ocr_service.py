@@ -2,10 +2,20 @@ from flask import Flask, request, jsonify
 import cv2
 import numpy as np
 from paddleocr import PaddleOCR
+import os
 
 app = Flask(__name__)
 # Initialize once for efficiency (set lang to 'en' or another if needed)
-ocr_model = PaddleOCR(use_angle_cls=True, lang='en')
+# Suppress Paddle's attempt to write logs to /proc/self/io on some systems
+os.environ.setdefault("FLAGS_log_dir", "/tmp")
+
+try:
+    ocr_model = PaddleOCR(use_textline_orientation=True, lang='en')
+except Exception as e:
+    raise RuntimeError(
+        "Failed to initialize PaddleOCR. Ensure paddlex with OCR extras is installed." 
+        f"\nOriginal error: {e}"
+    )
 
 def box_area(box):
     """Return the area of a quadrilateral box."""
