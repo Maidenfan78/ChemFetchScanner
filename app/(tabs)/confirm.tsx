@@ -1,19 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Button, StyleSheet, Image, Alert, TextInput, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  Button,
+  StyleSheet,
+  Image,
+  Alert,
+  TextInput,
+  Dimensions,
+  PanResponder,
+  PanResponderGestureState,
+} from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const TARGET_BOX_WIDTH = 0.7;
-const TARGET_BOX_HEIGHT = 0.3;
+const TARGET_BOX_WIDTH = 0.8;
+const TARGET_BOX_HEIGHT = 0.2;
 
 export default function Confirm() {
   const { name: barcodeName = '', size: barcodeSize = '', code = '' } = useLocalSearchParams<{ name: string; size: string; code: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [photo, setPhoto] = useState<any>(null);
   const [ocr, setOcr] = useState<{ bestName?: string, bestSize?: string, text?: string }>({});
-  const [step, setStep] = useState<'photo' | 'pick' | 'edit' | 'done'>('photo');
+  const [step, setStep] = useState<'photo' | 'crop' | 'pick' | 'edit' | 'done'>('photo');
   const [error, setError] = useState('');
   const [manualName, setManualName] = useState('');
   const [manualSize, setManualSize] = useState('');
@@ -24,13 +35,29 @@ export default function Confirm() {
   const cameraRef = useRef<CameraView>(null);
   const [cameraLayout, setCameraLayout] = useState({ width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
 
-  const getCropInfo = () => ({
-    left: Math.round((1 - TARGET_BOX_WIDTH) / 2 * cameraLayout.width),
-    top: Math.round((1 - TARGET_BOX_HEIGHT) / 2 * cameraLayout.height),
-    width: Math.round(cameraLayout.width * TARGET_BOX_WIDTH),
-    height: Math.round(cameraLayout.height * TARGET_BOX_HEIGHT),
+  const [crop, setCrop] = useState({
+    leftRatio: (1 - TARGET_BOX_WIDTH) / 2,
+    topRatio: (1 - TARGET_BOX_HEIGHT) / 2,
+    widthRatio: TARGET_BOX_WIDTH,
+    heightRatio: TARGET_BOX_HEIGHT,
+  });
+
+  const [imageLayout, setImageLayout] = useState({ width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
+
+  const getDefaultCropInfo = () => ({
+    leftRatio: (1 - TARGET_BOX_WIDTH) / 2,
+    topRatio: (1 - TARGET_BOX_HEIGHT) / 2,
+    widthRatio: TARGET_BOX_WIDTH,
+    heightRatio: TARGET_BOX_HEIGHT,
+  });
+
+  const getCurrentCropInfo = () => ({
+    left: Math.round(crop.leftRatio * cameraLayout.width),
+    top: Math.round(crop.topRatio * cameraLayout.height),
+    width: Math.round(crop.widthRatio * cameraLayout.width),
+    height: Math.round(crop.heightRatio * cameraLayout.height),
     screenWidth: cameraLayout.width,
-    screenHeight: cameraLayout.height
+    screenHeight: cameraLayout.height,
   });
 
   const capture = async () => {
@@ -41,18 +68,111 @@ export default function Confirm() {
     try {
       const pic = await cameraRef.current.takePictureAsync({ base64: true, quality: 1 });
       setPhoto(pic);
+      setCrop(getDefaultCropInfo());
+      setStep('crop');
+    } catch (e: any) {
+      setError(e?.message || String(e));
+      Alert.alert('Capture Error', e?.message || String(e));
+    }
+  };
 
-      // Include actual photo width and height with cropInfo
+  const panBox = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_: any, g: PanResponderGestureState) => {
+        setCrop(c => {
+          const left = Math.max(0, Math.min(c.leftRatio + g.dx / imageLayout.width, 1 - c.widthRatio));
+          const top = Math.max(0, Math.min(c.topRatio + g.dy / imageLayout.height, 1 - c.heightRatio));
+          return { ...c, leftRatio: left, topRatio: top };
+        });
+      },
+    })
+  ).current;
+
+  const panTop = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_: any, g: PanResponderGestureState) => {
+        setCrop(c => {
+          let top = c.topRatio + g.dy / imageLayout.height;
+          let height = c.heightRatio - g.dy / imageLayout.height;
+          if (top < 0) {
+            height += top;
+            top = 0;
+          }
+          if (height < 0.05) {
+            top = c.topRatio + c.heightRatio - 0.05;
+            height = 0.05;
+          }
+          return { ...c, topRatio: top, heightRatio: height };
+        });
+      },
+    })
+  ).current;
+
+  const panBottom = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_: any, g: PanResponderGestureState) => {
+        setCrop(c => {
+          let height = c.heightRatio + g.dy / imageLayout.height;
+          if (c.topRatio + height > 1) height = 1 - c.topRatio;
+          if (height < 0.05) height = 0.05;
+          return { ...c, heightRatio: height };
+        });
+      },
+    })
+  ).current;
+
+  const panLeft = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_: any, g: PanResponderGestureState) => {
+        setCrop(c => {
+          let left = c.leftRatio + g.dx / imageLayout.width;
+          let width = c.widthRatio - g.dx / imageLayout.width;
+          if (left < 0) {
+            width += left;
+            left = 0;
+          }
+          if (width < 0.05) {
+            left = c.leftRatio + c.widthRatio - 0.05;
+            width = 0.05;
+          }
+          return { ...c, leftRatio: left, widthRatio: width };
+        });
+      },
+    })
+  ).current;
+
+  const panRight = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_: any, g: PanResponderGestureState) => {
+        setCrop(c => {
+          let width = c.widthRatio + g.dx / imageLayout.width;
+          if (c.leftRatio + width > 1) width = 1 - c.leftRatio;
+          if (width < 0.05) width = 0.05;
+          return { ...c, widthRatio: width };
+        });
+      },
+    })
+  ).current;
+
+  const runOcr = async () => {
+    if (!photo) return;
+    setError('');
+    try {
       const extendedCropInfo = {
-        ...getCropInfo(),
-        photoWidth: pic.width,
-        photoHeight: pic.height,
+        ...getCurrentCropInfo(),
+        photoWidth: photo.width,
+        photoHeight: photo.height,
       };
 
       const res = await fetch('http://192.168.68.52:3000/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: pic.base64, cropInfo: extendedCropInfo }),
+        body: JSON.stringify({ image: photo.base64, cropInfo: extendedCropInfo }),
       });
       const data = await res.json();
 
@@ -87,7 +207,7 @@ export default function Confirm() {
       setStep('pick');
     } catch (e: any) {
       setError(e?.message || String(e));
-      Alert.alert('Capture Error', e?.message || String(e));
+      Alert.alert('OCR Error', e?.message || String(e));
     }
   };
 
@@ -137,7 +257,9 @@ export default function Confirm() {
                 setCameraLayout({ width, height });
               }}
             />
-            <View style={styles.targetBox} pointerEvents="none" />
+            <View style={styles.targetBox} pointerEvents="none">
+              <View style={styles.centerLine} />
+            </View>
             <Text style={styles.targetText}>Align product label inside the box</Text>
           </>
         )}
@@ -153,6 +275,54 @@ export default function Confirm() {
             }
           }}
         />
+      </View>
+    );
+  }
+
+  if (step === 'crop' && photo) {
+    return (
+      <View style={styles.container}>
+        <Image
+          source={{ uri: photo.uri }}
+          style={styles.preview}
+          resizeMode="contain"
+          onLayout={e => {
+            const { width, height } = e.nativeEvent.layout;
+            setImageLayout({ width, height });
+          }}
+        />
+        <View
+          style={[
+            styles.cropBox,
+            {
+              left: crop.leftRatio * imageLayout.width,
+              top: crop.topRatio * imageLayout.height,
+              width: crop.widthRatio * imageLayout.width,
+              height: crop.heightRatio * imageLayout.height,
+            },
+          ]}
+          {...panBox.panHandlers}
+        >
+          <View style={styles.centerLine} pointerEvents="none" />
+          <View
+            style={[styles.handle, styles.topHandle]}
+            {...panTop.panHandlers}
+          />
+          <View
+            style={[styles.handle, styles.bottomHandle]}
+            {...panBottom.panHandlers}
+          />
+          <View
+            style={[styles.handle, styles.leftHandle]}
+            {...panLeft.panHandlers}
+          />
+          <View
+            style={[styles.handle, styles.rightHandle]}
+            {...panRight.panHandlers}
+          />
+        </View>
+        {error ? <Text style={styles.error}>Error: {error}</Text> : null}
+        <Button title="Run OCR" onPress={runOcr} />
       </View>
     );
   }
@@ -258,7 +428,32 @@ const styles = StyleSheet.create({
     borderColor: '#4af',
     borderRadius: 10,
     zIndex: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+  centerLine: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#4af',
+  },
+  cropBox: {
+    position: 'absolute',
+    borderWidth: 3,
+    borderColor: '#4af',
+    borderRadius: 10,
+  },
+  handle: {
+    position: 'absolute',
+    backgroundColor: '#4af',
+    opacity: 0.6,
+  },
+  topHandle: { top: -10, left: -20, right: -20, height: 20 },
+  bottomHandle: { bottom: -10, left: -20, right: -20, height: 20 },
+  leftHandle: { top: -20, bottom: -20, left: -10, width: 20 },
+  rightHandle: { top: -20, bottom: -20, right: -10, width: 20 },
   targetText: {
     position: 'absolute',
     bottom: 40,
