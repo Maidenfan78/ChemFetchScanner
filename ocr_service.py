@@ -18,8 +18,22 @@ except Exception as e:
     )
 
 def box_area(box):
-    """Return the area of a quadrilateral box."""
-    pts = np.array(box, dtype="float32")
+    """Return the area of a quadrilateral box.
+
+    This helper guards against malformed inputs that sometimes appear in
+    PaddleOCR results which would otherwise trigger an OpenCV assertion.
+    """
+
+    if box is None:
+        return 0.0
+
+    pts = np.asarray(box, dtype=np.float32)
+
+    # Ensure the contour has at least three points and is shaped (N, 2)
+    if pts.size < 6:
+        return 0.0
+
+    pts = pts.reshape(-1, 2)
     return float(cv2.contourArea(pts))
 
 def preprocess_image(img_bytes):
