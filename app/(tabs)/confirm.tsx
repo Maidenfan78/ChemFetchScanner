@@ -76,85 +76,100 @@ export default function Confirm() {
     }
   };
 
+  const panBoxStart = useRef(crop);
   const panBox = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        panBoxStart.current = { ...crop };
+      },
       onPanResponderMove: (_: any, g: PanResponderGestureState) => {
-        setCrop(c => {
-          const left = Math.max(0, Math.min(c.leftRatio + g.dx / imageLayout.width, 1 - c.widthRatio));
-          const top = Math.max(0, Math.min(c.topRatio + g.dy / imageLayout.height, 1 - c.heightRatio));
-          return { ...c, leftRatio: left, topRatio: top };
-        });
+        const start = panBoxStart.current;
+        const left = Math.max(0, Math.min(start.leftRatio + g.dx / imageLayout.width, 1 - start.widthRatio));
+        const top = Math.max(0, Math.min(start.topRatio + g.dy / imageLayout.height, 1 - start.heightRatio));
+        setCrop(c => ({ ...c, leftRatio: left, topRatio: top }));
       },
     })
   ).current;
 
+  const panTopStart = useRef(crop);
   const panTop = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        panTopStart.current = { ...crop };
+      },
       onPanResponderMove: (_: any, g: PanResponderGestureState) => {
-        setCrop(c => {
-          let top = c.topRatio + g.dy / imageLayout.height;
-          let height = c.heightRatio - g.dy / imageLayout.height;
-          if (top < 0) {
-            height += top;
-            top = 0;
-          }
-          if (height < 0.05) {
-            top = c.topRatio + c.heightRatio - 0.05;
-            height = 0.05;
-          }
-          return { ...c, topRatio: top, heightRatio: height };
-        });
+        const start = panTopStart.current;
+        let top = start.topRatio + g.dy / imageLayout.height;
+        let height = start.heightRatio - g.dy / imageLayout.height;
+        if (top < 0) {
+          height += top;
+          top = 0;
+        }
+        if (height < 0.05) {
+          top = start.topRatio + start.heightRatio - 0.05;
+          height = 0.05;
+        }
+        setCrop(c => ({ ...c, topRatio: top, heightRatio: height }));
       },
     })
   ).current;
 
+  const panBottomStart = useRef(crop);
   const panBottom = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        panBottomStart.current = { ...crop };
+      },
       onPanResponderMove: (_: any, g: PanResponderGestureState) => {
-        setCrop(c => {
-          let height = c.heightRatio + g.dy / imageLayout.height;
-          if (c.topRatio + height > 1) height = 1 - c.topRatio;
-          if (height < 0.05) height = 0.05;
-          return { ...c, heightRatio: height };
-        });
+        const start = panBottomStart.current;
+        let height = start.heightRatio + g.dy / imageLayout.height;
+        if (start.topRatio + height > 1) height = 1 - start.topRatio;
+        if (height < 0.05) height = 0.05;
+        setCrop(c => ({ ...c, heightRatio: height }));
       },
     })
   ).current;
 
+  const panLeftStart = useRef(crop);
   const panLeft = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        panLeftStart.current = { ...crop };
+      },
       onPanResponderMove: (_: any, g: PanResponderGestureState) => {
-        setCrop(c => {
-          let left = c.leftRatio + g.dx / imageLayout.width;
-          let width = c.widthRatio - g.dx / imageLayout.width;
-          if (left < 0) {
-            width += left;
-            left = 0;
-          }
-          if (width < 0.05) {
-            left = c.leftRatio + c.widthRatio - 0.05;
-            width = 0.05;
-          }
-          return { ...c, leftRatio: left, widthRatio: width };
-        });
+        const start = panLeftStart.current;
+        let left = start.leftRatio + g.dx / imageLayout.width;
+        let width = start.widthRatio - g.dx / imageLayout.width;
+        if (left < 0) {
+          width += left;
+          left = 0;
+        }
+        if (width < 0.05) {
+          left = start.leftRatio + start.widthRatio - 0.05;
+          width = 0.05;
+        }
+        setCrop(c => ({ ...c, leftRatio: left, widthRatio: width }));
       },
     })
   ).current;
 
+  const panRightStart = useRef(crop);
   const panRight = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        panRightStart.current = { ...crop };
+      },
       onPanResponderMove: (_: any, g: PanResponderGestureState) => {
-        setCrop(c => {
-          let width = c.widthRatio + g.dx / imageLayout.width;
-          if (c.leftRatio + width > 1) width = 1 - c.leftRatio;
-          if (width < 0.05) width = 0.05;
-          return { ...c, widthRatio: width };
-        });
+        const start = panRightStart.current;
+        let width = start.widthRatio + g.dx / imageLayout.width;
+        if (start.leftRatio + width > 1) width = 1 - start.leftRatio;
+        if (width < 0.05) width = 0.05;
+        setCrop(c => ({ ...c, widthRatio: width }));
       },
     })
   ).current;
