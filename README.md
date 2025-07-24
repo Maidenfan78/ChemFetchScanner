@@ -1,6 +1,6 @@
 # ChemFetchScanner
 
-ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans EAN-8 and EAN-13 barcodes, looks up product details on the web and stores them in a Supabase database. The backend now searches Bing using a headless browser and falls back to a lightweight scraper when necessary.
+ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans EAN‑8 and EAN‑13 barcodes, looks up product details on the web and stores them in a Supabase database. The backend searches Bing using a headless browser and falls back to a lightweight scraper when necessary.  A separate Python OCR microservice now handles label recognition.
 
 ---
 
@@ -10,8 +10,9 @@ ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans
 - **Bing search** via headless Puppeteer (fallback to Cheerio).
 - **Database first** – if a scanned code already exists, saved details are returned immediately.
 - **Web scraping** of result pages for product name and size when a code is unknown.
-- **Image confirmation** – capture a focused photo of the product label and run OCR with Tesseract.
+- **Image confirmation** – capture a focused photo of the product label, crop it with adjustable handles and run OCR via the Python service.
 - **Mismatch choice** – compare OCR results with scraped text, then choose which to keep or enter details manually.
+- **SDS link detection** for safety data sheets.
 - **Supabase storage** for final name and size.
 
 ---
@@ -19,7 +20,7 @@ ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans
 ## Tech Stack
 
 - **Frontend:** Expo (`expo-router`, `expo-camera`)
-- **Backend:** Node.js + Express, Puppeteer, Cheerio, Tesseract.js
+- **Backend:** Node.js + Express with a Python (PaddleOCR) microservice, Puppeteer, Cheerio
 - **Database:** Supabase Postgres
 
 The `products` table contains:
@@ -47,7 +48,12 @@ CREATE TABLE products (
    cd ChemFetchScanner
    npm install
    ```
-2. **Configure the backend**
+2. **Install OCR dependencies**
+   ```bash
+   pip install vendor/*
+   ```
+   All Python wheels required by the OCR service are stored in the `/vendor` folder.
+3. **Configure the backend**
    ```bash
    cd server
    npm install
@@ -58,15 +64,19 @@ CREATE TABLE products (
    SB_URL=https://<project>.supabase.co
    SB_SERVICE_KEY=<service-role-secret>
    ```
-3. **Run the backend**
+4. **Run the backend**
    ```bash
    npm start
    ```
-4. **Run the mobile app** (from the project root)
+5. **Start the OCR service**
+   ```bash
+   python ocr_service.py
+   ```
+6. **Run the mobile app** (from the project root)
    ```bash
    npm start
    ```
-5. **Run tests**
+7. **Run tests**
    ```bash
    npm test
    ```
