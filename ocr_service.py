@@ -56,7 +56,11 @@ def ocr():
 
     try:
         print("Running OCR...")
-        result = ocr_model.ocr(processed, cls=True)
+        try:
+            result = ocr_model.ocr(processed, cls=True)
+        except TypeError:
+            # For newer PaddleOCR versions where `cls` is unsupported
+            result = ocr_model.ocr(processed)
         print("OCR complete.")
         print("PaddleOCR result:", result)
     except Exception as e:
