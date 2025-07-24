@@ -17,24 +17,28 @@ except Exception as e:
         f"\nOriginal error: {e}"
     )
 
-def box_area(box):
-    """Return the area of a quadrilateral box.
+def box_area(box: list | np.ndarray) -> float:
+    """Return the area of a quadrilateral text box.
 
-    This helper guards against malformed inputs that sometimes appear in
-    PaddleOCR results which would otherwise trigger an OpenCV assertion.
+    PaddleOCR can sometimes return malformed or rotated boxes which lead to
+    zero areas if directly passed to :func:`cv2.contourArea`. To make the area
+    computation more robust we first attempt the polygon area and then fall
+    back to the bounding rectangle area whenever the polygon area is zero.
     """
 
     if box is None:
         return 0.0
 
-    pts = np.asarray(box, dtype=np.float32)
-
-    # Ensure the contour has at least three points and is shaped (N, 2)
-    if pts.size < 6:
+    pts = np.asarray(box, dtype=np.float32).reshape(-1, 2)
+    if pts.shape[0] < 3:
         return 0.0
 
-    pts = pts.reshape(-1, 2)
-    return float(cv2.contourArea(pts))
+    area = float(cv2.contourArea(pts))
+    if area == 0.0:
+        x, y, w, h = cv2.boundingRect(pts)
+        area = float(w * h)
+
+    return area
 
 def preprocess_image(img_bytes):
     npimg = np.frombuffer(img_bytes, np.uint8)
