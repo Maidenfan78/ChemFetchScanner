@@ -92,7 +92,17 @@ export default function Confirm() {
   };
 
 
-  const onConfirm = (finalName: string, finalSize: string) => {
+  const onConfirm = async (finalName: string, finalSize: string) => {
+    try {
+      await fetch('http://192.168.68.52:3000/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, name: finalName, size: finalSize }),
+      });
+    } catch (e) {
+      console.error('Save error', e);
+    }
+
     Alert.alert(
       'Saved',
       `Name: ${finalName}\nSize: ${finalSize}`,
