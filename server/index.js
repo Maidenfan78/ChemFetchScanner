@@ -35,7 +35,11 @@ async function getBrowser() {
 
 async function closeBrowser() {
   if (browserPromise) {
-    try { (await browserPromise).close(); } catch {}
+    try {
+      const browser = await browserPromise;
+      await browser.close();
+    } catch {}
+    browserPromise = null;
   }
 }
 process.on('SIGINT', () => closeBrowser().finally(() => process.exit()));
