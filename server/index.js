@@ -277,5 +277,20 @@ app.post('/ocr', async (req, res) => {
     fs.unlink(filename, () => {});
   }
 });
+
+// --- CONFIRM ENDPOINT ---
+app.post('/confirm', async (req, res) => {
+  const { code, name = '', size = '' } = req.body || {};
+  if (!code) return res.status(400).json({ error: 'Missing code' });
+  const updates = { product_name: name, size };
+  const { data, error } = await supabase
+    .from('products')
+    .update(updates)
+    .eq('barcode', code)
+    .select()
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, product: data });
+});
 app.listen(3000, () => console.log('Listening on 3000'));
 console.log('Supabase:', process.env.SB_URL, 'ServiceRole?', isServiceRole(process.env.SB_SERVICE_KEY));
