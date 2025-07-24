@@ -113,7 +113,8 @@ def ocr():
                 entry = {
                     'text': txt,
                     'confidence': float(conf),
-                    'box': [list(map(float, pt)) for pt in box],
+                    # Flatten and reshape to pairs to avoid iterable errors
+                    'box': np.asarray(box, dtype=float).reshape(-1, 2).tolist(),
                     'area': area
                 }
                 lines.append(entry)
@@ -130,7 +131,8 @@ def ocr():
                 entry = {
                     'text': txt,
                     'confidence': float(conf),
-                    'box': [list(map(float, pt)) for pt in box],
+                    # Flatten and reshape to pairs to avoid iterable errors
+                    'box': np.asarray(box, dtype=float).reshape(-1, 2).tolist(),
                     'area': area
                 }
                 lines.append(entry)
