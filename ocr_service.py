@@ -17,18 +17,22 @@ def preprocess_image(img_bytes):
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
     enhanced = clahe.apply(denoised)
     thresh = cv2.adaptiveThreshold(
-        enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+        enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
         cv2.THRESH_BINARY, 31, 15
     )
     coords = np.column_stack(np.where(thresh > 0))
-    angle = cv2.minAreaRect(coords)[-1]
-    if angle < -45:
-        angle = -(90 + angle)
+    if coords.size > 0:
+        angle = cv2.minAreaRect(coords)[-1]
+        if angle < -45:
+            angle = -(90 + angle)
+        else:
+            angle = -angle
+        (h, w) = thresh.shape
+        M = cv2.getRotationMatrix2D((w // 2, h // 2), angle, 1.0)
+        deskewed = cv2.warpAffine(thresh, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
     else:
-        angle = -angle
-    (h, w) = thresh.shape
-    M = cv2.getRotationMatrix2D((w // 2, h // 2), angle, 1.0)
-    deskewed = cv2.warpAffine(thresh, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+        # Not enough data to determine rotation
+        deskewed = thresh
     # Convert back to 3-channel for PaddleOCR (expects color)
     processed = cv2.cvtColor(deskewed, cv2.COLOR_GRAY2BGR)
     return processed

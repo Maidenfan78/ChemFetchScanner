@@ -186,10 +186,11 @@ app.post('/ocr', async (req, res) => {
   const { image, cropInfo } = req.body;
   if (!image) return res.status(400).json({ error: 'Missing image' });
 
+  const buffer = Buffer.from(image, 'base64');
+  const filename = `ocr_${Date.now()}.jpg`;
+  fs.writeFileSync(filename, buffer);
+
   try {
-    const buffer = Buffer.from(image, 'base64');
-    const filename = `ocr_${Date.now()}.jpg`;
-    fs.writeFileSync(filename, buffer);
 
     let processed = buffer;
     if (cropInfo && cropInfo.width && cropInfo.height && cropInfo.photoWidth && cropInfo.photoHeight) {
@@ -272,6 +273,8 @@ app.post('/ocr', async (req, res) => {
   } catch (e) {
     console.log('[OCR] Error during OCR:', e);
     res.status(500).json({ error: e.message });
+  } finally {
+    fs.unlink(filename, () => {});
   }
 });
 app.listen(3000, () => console.log('Listening on 3000'));
