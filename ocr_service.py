@@ -69,14 +69,20 @@ def ocr():
 
     lines = []
     full_text = []
+
     for line in result:
-        if len(line) >= 2:
-            txt, conf = line[1]
-            lines.append({
-                'text': txt,
-                'confidence': float(conf)
-            })
-            full_text.append(txt)
+        if isinstance(line, dict):
+            texts = line.get('rec_texts', [])
+            scores = line.get('rec_scores', [])
+            for txt, conf in zip(texts, scores):
+                lines.append({'text': txt, 'confidence': float(conf)})
+                full_text.append(txt)
+        elif isinstance(line, (list, tuple)) and len(line) >= 2:
+            text_info = line[1]
+            if isinstance(text_info, (list, tuple)) and len(text_info) >= 2:
+                txt, conf = text_info[0], text_info[1]
+                lines.append({'text': txt, 'confidence': float(conf)})
+                full_text.append(txt)
 
     print("Returning results.")
     return jsonify({
