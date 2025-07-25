@@ -2,7 +2,7 @@ import os
 import tempfile
 import cv2
 import numpy as np
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from flask import Flask, request, jsonify
 from paddleocr import PaddleOCR
 
@@ -19,6 +19,14 @@ def box_area(box: List[List[float]] | np.ndarray) -> float:
         _, _, w, h = cv2.boundingRect(pts.astype(np.int32))
         return float(w * h)
     return float(cv2.contourArea(pts))
+
+
+def box_origin(box: List[List[float]] | np.ndarray) -> Tuple[float, float]:
+    """Return the top-left x, y coordinates of a polygon."""
+    pts = np.asarray(box, dtype=np.float32).reshape(-1, 2)
+    x = float(pts[:, 0].min())
+    y = float(pts[:, 1].min())
+    return x, y
 
 
 def preprocess_array(img: np.ndarray) -> np.ndarray:
@@ -139,6 +147,7 @@ def ocr():
         max_area = max(l['area'] for l in lines)
         area_threshold = 0.3 * max_area
         filtered = [l for l in lines if l['area'] >= area_threshold]
+        filtered.sort(key=lambda l: (box_origin(l['box'])[1], box_origin(l['box'])[0]))
     else:
         filtered = []
 
