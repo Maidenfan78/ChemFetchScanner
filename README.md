@@ -1,6 +1,6 @@
 # ChemFetchScanner
 
-ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans EAN‑8 and EAN‑13 barcodes, looks up product details on the web and stores them in a Supabase database. The backend searches Bing using a headless browser and falls back to a lightweight scraper when necessary.  A separate Python OCR microservice now handles label recognition.
+ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans EAN‑8 and EAN‑13 barcodes, looks up product details on the web and stores them in a Supabase database. The backend searches Bing using a headless browser and falls back to a lightweight scraper when necessary. A separate Python OCR microservice now handles label recognition.
 
 ---
 
@@ -14,6 +14,7 @@ ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans
 - **Mismatch choice** – compare OCR results with scraped text, then choose which to keep or enter details manually.
 - **SDS link detection** for safety data sheets.
 - **Supabase storage** for final name and size.
+- **GPU check** endpoint at `/gpu-check` to verify PaddleOCR is using CUDA.
 
 ---
 
@@ -79,6 +80,10 @@ CREATE TABLE products (
 7. **Run tests**
    ```bash
    npm test
+   ```
+8. **Format code**
+   ```bash
+   npm run format
    ```
 
 ---
