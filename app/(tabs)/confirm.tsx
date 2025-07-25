@@ -21,20 +21,33 @@ const TARGET_BOX_WIDTH = 0.8;
 const TARGET_BOX_HEIGHT = 0.2;
 
 export default function Confirm() {
-  const { name: barcodeName = '', size: barcodeSize = '', code = '' } = useLocalSearchParams<{ name: string; size: string; code: string }>();
+  const {
+    name: barcodeName = '',
+    size: barcodeSize = '',
+    code = '',
+    editOnly: editOnlyParam = '0',
+  } = useLocalSearchParams<{
+    name: string;
+    size: string;
+    code: string;
+    editOnly?: string;
+  }>();
+  const editOnly = editOnlyParam === '1' || editOnlyParam === 'true';
   const [permission, requestPermission] = useCameraPermissions();
   const [photo, setPhoto] = useState<any>(null);
   const [ocr, setOcr] = useState<{ bestName?: string, bestSize?: string, text?: string }>({});
-  const [step, setStep] = useState<'photo' | 'crop' | 'pick' | 'edit' | 'done'>('photo');
+  const [step, setStep] = useState<'photo' | 'crop' | 'pick' | 'edit' | 'done'>(editOnly ? 'edit' : 'photo');
   const [error, setError] = useState('');
-  const [manualName, setManualName] = useState('');
-  const [manualSize, setManualSize] = useState('');
+  const [manualName, setManualName] = useState(editOnly ? barcodeName : '');
+  const [manualSize, setManualSize] = useState(editOnly ? barcodeSize : '');
   const [sizePromptVisible, setSizePromptVisible] = useState(false);
   const [pendingName, setPendingName] = useState('');
   const [pendingSize, setPendingSize] = useState('');
   const router = useRouter();
 
-  useEffect(() => { requestPermission(); }, []);
+  useEffect(() => {
+    if (!editOnly) requestPermission();
+  }, [editOnly]);
 
   const cameraRef = useRef<CameraView>(null);
   const [cameraLayout, setCameraLayout] = useState({ width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
@@ -295,8 +308,10 @@ export default function Confirm() {
     </Modal>
   );
 
-  if (!permission) return <Text>Loading permissions…</Text>;
-  if (!permission.granted) return <Text>No camera access</Text>;
+  if (!editOnly) {
+    if (!permission) return <Text>Loading permissions…</Text>;
+    if (!permission.granted) return <Text>No camera access</Text>;
+  }
 
   if (step === 'photo') {
     return (

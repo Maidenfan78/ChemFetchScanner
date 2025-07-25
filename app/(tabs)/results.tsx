@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet, ActivityIndicator, Button } from 'react-native';
+import { Alert, Text, View, StyleSheet, ActivityIndicator, Button } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 
@@ -17,6 +17,7 @@ export default function Results() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ScrapedItem[]>([]);
+  const [product, setProduct] = useState<any | null>(null);
 
   useEffect(() => {
     if (!code) return;
@@ -36,6 +37,21 @@ export default function Results() {
         console.log('✅ Scan API response:', data);
         const scraped = Array.isArray(data?.scraped) ? data.scraped : [];
         setItems(scraped);
+        setProduct(data.product || null);
+        if (data.product && (!data.product.size || !data.product.weight)) {
+          Alert.alert('Missing info', 'This item is missing weight or size. Add now?', [
+            {
+              text: 'Add Info',
+              onPress: () =>
+                router.push(
+                  `/confirm?code=${encodeURIComponent(code ?? '')}&name=${encodeURIComponent(
+                    data.product.product_name || ''
+                  )}&size=${encodeURIComponent(data.product.size || '')}&editOnly=1`
+                ),
+            },
+            { text: 'Later', style: 'cancel' },
+          ]);
+        }
         setLoading(false);
       })
       .catch(err => {
@@ -52,11 +68,26 @@ export default function Results() {
     );
   }
 
-  if (items.length === 0) {
+  if (!product && items.length === 0) {
     console.log('🔍 No results found for code:', code);
     return (
       <View style={styles.center}>
         <Text style={styles.text}>No results found for {code}</Text>
+      </View>
+    );
+  }
+
+  if (product) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <Text style={styles.heading}>{product.product_name || 'Unknown product'}</Text>
+          <Text style={styles.text}>Size: {product.size || 'N/A'}</Text>
+          <Text style={styles.text}>Weight: {product.weight || 'N/A'}</Text>
+          {product.sds_url ? (
+            <Text style={styles.link}>SDS: {product.sds_url}</Text>
+          ) : null}
+        </View>
       </View>
     );
   }
@@ -77,7 +108,9 @@ export default function Results() {
         title="Confirm with Photo"
         onPress={() =>
           router.push(
-            `/confirm?code=${encodeURIComponent(code ?? '')}&name=${encodeURIComponent(first.name)}&size=${encodeURIComponent(first.size)}`
+            `/confirm?code=${encodeURIComponent(code ?? '')}&name=${encodeURIComponent(
+              first.name
+            )}&size=${encodeURIComponent(first.size)}`
           )
         }
       />
