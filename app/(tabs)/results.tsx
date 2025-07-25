@@ -64,13 +64,15 @@ export default function Results() {
   const first = items[0];
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Product: {first.name || 'N/A'}</Text>
-      <Text>Size: {first.size || 'N/A'}</Text>
-      {first.sdsUrl ? (
-        <Text style={styles.link}>SDS: {first.sdsUrl}</Text>
-      ) : (
-        <Text>No SDS found</Text>
-      )}
+      <View style={styles.card}>
+        <Text style={styles.heading}>{first.name || 'Unknown product'}</Text>
+        <Text style={styles.text}>Size: {first.size || 'N/A'}</Text>
+        {first.sdsUrl ? (
+          <Text style={styles.link}>SDS: {first.sdsUrl}</Text>
+        ) : (
+          <Text style={styles.text}>No SDS found</Text>
+        )}
+      </View>
       <Button
         title="Confirm with Photo"
         onPress={() =>
@@ -88,5 +90,13 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   text: { fontSize: 16, color: '#333' },
   heading: { fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
-  link: { color: 'blue', marginTop: 8 },
+  link: { color: '#1abc9c', marginTop: 8 },
+  card: {
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 16,
+    backgroundColor: '#fafafa',
+  },
 });
