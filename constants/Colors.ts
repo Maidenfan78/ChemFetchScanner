@@ -1,19 +1,21 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
+// Brand colors for the app. These are used throughout the UI via the
+// `useThemeColor` helper in `components/Themed.tsx`.
+const tintColorLight = '#3498db';
+const tintColorDark = '#1abc9c';
 
 export default {
   light: {
-    text: '#000',
-    background: '#fff',
+    text: '#222',
+    background: '#fefefe',
     tint: tintColorLight,
-    tabIconDefault: '#ccc',
+    tabIconDefault: '#888',
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#fff',
+    text: '#f0f0f0',
     background: '#000',
     tint: tintColorDark,
-    tabIconDefault: '#ccc',
+    tabIconDefault: '#888',
     tabIconSelected: tintColorDark,
   },
 };

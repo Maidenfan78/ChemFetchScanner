@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Button, StyleSheet, Alert, Vibration } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Scanner() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -32,15 +33,17 @@ export default function Scanner() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <CameraView
         style={StyleSheet.absoluteFillObject}
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         barcodeScannerSettings={{ barcodeTypes: ['ean8', 'ean13'] }}
       />
-      <View style={styles.targetBox} pointerEvents="none" />
+      <View style={styles.targetBox} pointerEvents="none">
+        <Text style={styles.hint}>Align barcode</Text>
+      </View>
       {scanned && <Button title="Scan again" onPress={() => setScanned(false)} />}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -55,5 +58,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff',
     borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+  hint: { color: '#fff', fontWeight: 'bold' },
 });
