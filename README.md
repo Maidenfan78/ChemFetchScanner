@@ -32,7 +32,7 @@ ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans
 | Borders/Dividers    | Slate Gray     | `#CBD2D9` |
 | Button Hover        | Royal Blue Tint| `#4F52B6` |
 
-All colors meet WCAG 2.1 AA contrast requirements. Defined in [`apps/mobile/src/constants/Colors.ts`](apps/mobile/src/constants/Colors.ts).
+All colors meet WCAG 2.1 AA contrast requirements. Defined in [`/constants/Colors.ts`](/constants/Colors.ts).
 
 ---
 
@@ -50,8 +50,7 @@ CREATE TABLE products (
   barcode TEXT NOT NULL,
   product_name TEXT,
   manufacturer TEXT,
-  size TEXT,
-  weight TEXT,
+  contents_size_weight TEXT,
   sds_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );

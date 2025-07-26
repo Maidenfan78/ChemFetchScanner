@@ -3,8 +3,7 @@ CREATE TABLE products (
   barcode TEXT NOT NULL,
   product_name TEXT,
   manufacturer TEXT,
-  size TEXT,
-  weight TEXT,
+  contents_size_weight TEXT,
   sds_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );

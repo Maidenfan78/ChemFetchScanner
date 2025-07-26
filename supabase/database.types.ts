@@ -17,33 +17,30 @@ export type Database = {
       products: {
         Row: {
           barcode: string
+          contents_size_weight: string | null
           created_at: string | null
           id: number
           manufacturer: string | null
           product_name: string | null
           sds_url: string | null
-          size: string | null
-          weight: string | null
         }
         Insert: {
           barcode: string
+          contents_size_weight?: string | null
           created_at?: string | null
           id?: number
           manufacturer?: string | null
           product_name?: string | null
           sds_url?: string | null
-          size?: string | null
-          weight?: string | null
         }
         Update: {
           barcode?: string
+          contents_size_weight?: string | null
           created_at?: string | null
           id?: number
           manufacturer?: string | null
           product_name?: string | null
           sds_url?: string | null
-          size?: string | null
-          weight?: string | null
         }
         Relationships: []
       }
