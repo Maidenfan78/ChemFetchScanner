@@ -13,6 +13,7 @@ ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans
 - **Image confirmation** – capture a focused photo of the product label, crop it with adjustable handles and run OCR via the Python service.
 - **Mismatch choice** – compare OCR results with scraped text, then choose which to keep or enter details manually.
 - **SDS link detection** for safety data sheets.
+- **SDS search** via `/sds-by-name` endpoint using product names.
 - **Supabase storage** for final name and size/weight.
 - **GPU check** endpoint at `/gpu-check` to verify PaddleOCR is using CUDA.
 

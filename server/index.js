@@ -56,8 +56,8 @@ function isServiceRole(key) {
 app.use(express.json({ limit: '15mb' }));
 
 // Bing search (headless + Cheerio fallback)
-async function fetchBingLinksHeadless(barcode) {
-  const term = `${barcode}`;
+async function fetchBingLinksHeadless(term) {
+  term = `${term}`;
   const browser = await getBrowser();
   const page = await browser.newPage();
   await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-AU,en;q=0.9' });
@@ -73,8 +73,8 @@ async function fetchBingLinksHeadless(barcode) {
   await page.close();
   return links;
 }
-async function fetchBingLinksCheerio(barcode) {
-  const term = `${barcode}`;
+async function fetchBingLinksCheerio(term) {
+  term = `${term}`;
   const res = await axios.get(`https://www.bing.com/search?q=${encodeURIComponent(term)}`, {
     headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'en-AU' }
   });
@@ -86,10 +86,10 @@ async function fetchBingLinksCheerio(barcode) {
   });
   return urls;
 }
-async function fetchBingLinks(barcode) {
+async function fetchBingLinks(term) {
   let links = [];
-  try { links = await fetchBingLinksHeadless(barcode); } catch {}
-  if (!links.length) links = await fetchBingLinksCheerio(barcode);
+  try { links = await fetchBingLinksHeadless(term); } catch {}
+  if (!links.length) links = await fetchBingLinksCheerio(term);
   return links;
 }
 
@@ -122,6 +122,15 @@ async function scrapeProductInfo(url) {
 // Fallback: direct SDS-PDF query
 async function fetchSdsDirect(barcode) {
   const links = await fetchBingLinks(`${barcode} sds pdf`);
+  for (const link of links) {
+    if (link.endsWith('.pdf')) return link;
+  }
+  return '';
+}
+
+// Search SDS PDF using product name
+async function fetchSdsByName(name) {
+  const links = await fetchBingLinks(`${name} sds pdf`);
   for (const link of links) {
     if (link.endsWith('.pdf')) return link;
   }
@@ -238,6 +247,14 @@ app.post('/confirm', async (req, res) => {
     .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true, product: data });
+});
+
+// --- /sds-by-name endpoint ---
+app.post('/sds-by-name', async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Missing name' });
+  const sdsUrl = await fetchSdsByName(name);
+  res.json({ sdsUrl });
 });
 
 app.listen(3000, () => console.log('Listening on 3000'));
