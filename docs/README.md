@@ -39,6 +39,23 @@ CREATE TABLE products (
 );
 ```
 
+## 🎨 Color Scheme
+
+| Purpose             | Color Name     | Hex       |
+|---------------------|----------------|-----------|
+| Primary             | Deep Indigo    | `#3A3D98` |
+| Secondary           | Soft Orange    | `#FFA552` |
+| Accent (Success)    | Lime Green     | `#80C900` |
+| Error/Warning       | Safety Red     | `#D32F2F` |
+| Background (Light)  | Off-white      | `#F5F7FA` |
+| Background (Dark)   | Rich Charcoal  | `#1C1C1E` |
+| Text (Light)        | Charcoal       | `#1F2933` |
+| Text (Dark)         | Light Gray     | `#F2F2F2` |
+| Borders/Dividers    | Slate Gray     | `#CBD2D9` |
+| Button Hover        | Royal Blue Tint| `#4F52B6` |
+
+All colors meet WCAG 2.1 AA contrast requirements. Defined in [`apps/mobile/src/constants/Colors.ts`](apps/mobile/src/constants/Colors.ts).
+
 ---
 
 ## Setup
