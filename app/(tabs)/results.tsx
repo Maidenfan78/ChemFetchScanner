@@ -38,15 +38,15 @@ export default function Results() {
         const scraped = Array.isArray(data?.scraped) ? data.scraped : [];
         setItems(scraped);
         setProduct(data.product || null);
-        if (data.product && (!data.product.size || !data.product.weight)) {
-          Alert.alert('Missing info', 'This item is missing weight or size. Add now?', [
+        if (data.product && !data.product.contents_size_weight) {
+          Alert.alert('Missing info', 'This item is missing size/weight. Add now?', [
             {
               text: 'Add Info',
               onPress: () =>
                 router.push(
                   `/confirm?code=${encodeURIComponent(code ?? '')}&name=${encodeURIComponent(
                     data.product.product_name || ''
-                  )}&size=${encodeURIComponent(data.product.size || '')}&editOnly=1`
+                  )}&size=${encodeURIComponent(data.product.contents_size_weight || '')}&editOnly=1`
                 ),
             },
             { text: 'Later', style: 'cancel' },
@@ -82,8 +82,7 @@ export default function Results() {
       <View style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.heading}>{product.product_name || 'Unknown product'}</Text>
-          <Text style={styles.text}>Size: {product.size || 'N/A'}</Text>
-          <Text style={styles.text}>Weight: {product.weight || 'N/A'}</Text>
+          <Text style={styles.text}>Contents: {product.contents_size_weight || 'N/A'}</Text>
           {product.sds_url ? (
             <Text style={styles.link}>SDS: {product.sds_url}</Text>
           ) : null}
