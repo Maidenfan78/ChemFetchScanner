@@ -115,54 +115,34 @@ Bellow is either going to be it's own app or ChemfetchScanner will becom the Che
 
 
 *** Current folder structure.
+## Folder Structure
+
+```txt
 .
-├── AGENTS.md
-├── FOLDER_STRUCTURE.txt
-├── README.md
-├── android
-│   ├── app
-│   ├── build.gradle
-│   ├── gradle
-│   ├── gradle.properties
-│   ├── gradlew
-│   ├── gradlew.bat
-│   └── settings.gradle
-├── app
-│   ├── (tabs)
-│   ├── +html.tsx
-│   ├── +not-found.tsx
-│   ├── _layout.tsx
-│   └── modal.tsx
-├── app.json
-├── assets
-│   ├── fonts
-│   └── images
-├── components
-│   ├── EditScreenInfo.tsx
-│   ├── ExternalLink.tsx
-│   ├── StyledText.tsx
-│   ├── Themed.tsx
-│   ├── __tests__
-│   ├── useClientOnlyValue.ts
-│   ├── useClientOnlyValue.web.ts
-│   ├── useColorScheme.ts
-│   └── useColorScheme.web.ts
-├── constants
-│   └── Colors.ts
-├── ocr_service.py
-├── package-lock.json
-├── package.json
-├── requirements.txt
-├── server
-│   ├── app.json
-│   ├── eng.traineddata
-│   ├── index.js
-│   ├── package-lock.json
-│   ├── package.json
-│   └── preprocessed_1753394664613.jpg
-├── supabase
-│   ├── database.types.ts
-│   └── migrations
-└── tsconfig.json
+├── AGENTS_AND_TEAM.md          # Persona briefs and operating principles
+├── docs/
+│   ├── README.md               # Project documentation
+│   └── FOLDER_STRUCTURE.txt    # High-level directory map
+├── apps/
+│   └── mobile/
+│       ├── app/                # Expo Router pages and screens
+│       ├── assets/             # Fonts and images
+│       ├── components/         # Reusable React Native components
+│       ├── constants/          # Shared constants (e.g. colors)
+│       └── tsconfig.json       # TypeScript config for mobile app
+├── server/
+│   ├── node/                   # Express backend + Puppeteer scraping
+│   └── python/                 # OCR service using PaddleOCR
+│       ├── ocr_service.py
+│       └── vendor/             # Pre-built Python wheels
+├── scripts/
+│   └── python/                 # Future SDS parsing and tools
+├── supabase/
+│   ├── database.types.ts       # Supabase typed client schema
+│   └── migrations/             # SQL schema migrations
+├── .env.example                # Sample environment variables
+├── package.json                # Root-level dependencies and scripts
+└── tsconfig.json               # Shared TypeScript config
+
 
 15 directories, 34 files
