@@ -99,3 +99,10 @@ CREATE TABLE products (
 7. The chosen details are saved back to Supabase.
 
 This cropped approach avoids extra artwork confusing the OCR and improves size detection.
+
+## Future Work
+
+Still to add to the code:
+
+1. The code will scrape the web for `sds_url`. The best approach for this is still being evaluated.
+2. The code will store the URL in the `products` table under `sds_url`. The `size` and `weight` fields will be merged since they are effectively the same value.
