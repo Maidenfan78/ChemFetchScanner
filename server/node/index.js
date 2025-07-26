@@ -15,11 +15,11 @@ pptr.use(StealthPlugin());
 import { createClient } from '@supabase/supabase-js';
 import { load } from 'cheerio';
 
-dotenv.config();
-const app = express();
-const supabase = createClient(process.env.SB_URL, process.env.SB_SERVICE_KEY);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '.env') });
+const app = express();
+const supabase = createClient(process.env.SB_URL, process.env.SB_SERVICE_KEY);
 
 let browserPromise;
 async function getBrowser() {
@@ -188,7 +188,8 @@ app.post('/ocr', async (req, res) => {
 
   const buffer = Buffer.from(image, 'base64');
   const filename = `ocr_${Date.now()}.jpg`;
-  fs.writeFileSync(filename, buffer);
+  const filePath = path.join(__dirname, filename);
+  fs.writeFileSync(filePath, buffer);
 
   try {
 
@@ -241,7 +242,10 @@ app.post('/ocr', async (req, res) => {
         .resize({ width: 1200, withoutEnlargement: true })
         .toBuffer();
 
-      fs.writeFileSync(`preprocessed_${Date.now()}.jpg`, processed);
+      fs.writeFileSync(
+        path.join(__dirname, `preprocessed_${Date.now()}.jpg`),
+        processed
+      );
     } else {
       processed = await sharp(buffer)
         .rotate()
@@ -251,7 +255,10 @@ app.post('/ocr', async (req, res) => {
         .sharpen()
         .resize({ width: 1200, withoutEnlargement: true })
         .toBuffer();
-      fs.writeFileSync(`preprocessed_${Date.now()}.jpg`, processed);
+      fs.writeFileSync(
+        path.join(__dirname, `preprocessed_${Date.now()}.jpg`),
+        processed
+      );
     }
 
     // ---- Send processed image to Python microservice! ----
@@ -274,7 +281,7 @@ app.post('/ocr', async (req, res) => {
     console.log('[OCR] Error during OCR:', e);
     res.status(500).json({ error: e.message });
   } finally {
-    fs.unlink(filename, () => {});
+    fs.unlink(filePath, () => {});
   }
 });
 

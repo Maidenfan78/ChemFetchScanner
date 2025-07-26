@@ -84,7 +84,7 @@ All colors meet WCAG 2.1 AA contrast requirements. Defined in [`apps/mobile/src/
    ```
 4. **Run the backend**
    ```bash
-   npm start
+   node server/node/index.js
    ```
 5. **Start the OCR service**
    ```bash
