@@ -95,7 +95,7 @@ CREATE TABLE products (
 3. If not found, the server searches Bing, scrapes a few pages and returns the best guess for name and size.
 4. The user is prompted to take a close photo of the item label.
 5. OCR runs on the cropped label to extract a name and size.
-6. The scraped and OCR results are shown so the user can choose or manually edit.
+6. The scraped and OCR results are shown so the user can choose one of the two or manually add Item name and wight/size/contents.
 7. The chosen details are saved back to Supabase.
 
 This cropped approach avoids extra artwork confusing the OCR and improves size detection.
@@ -105,4 +105,64 @@ This cropped approach avoids extra artwork confusing the OCR and improves size d
 Still to add to the code:
 
 1. The code will scrape the web for `sds_url`. The best approach for this is still being evaluated.
-2. The code will store the URL in the `products` table under `sds_url`. The `size` and `weight` fields will be merged since they are effectively the same value.
+2. The code will store the URL in the `products` table under `sds_url`. 
+3. The `size` and `weight` fields will be merged since they are effectively the same value.
+
+Bellow is either going to be it's own app or ChemfetchScanner will becom the ChecmFetch app. This app is going to be used by companies, schools, etc where the OH&S or workers need a single or easy access to stored checmicals SDS. It will also aid the OH&S officer in keeping in date SDS sheets and will automaticlay parse data from the SDS sheet to this app with relevent data.
+4. A way to parse the SDS contents so to a new data base.
+5. Add a desktop app or web app where the user can access the checmical SDS/parsed data they have scanned with this ChemFetchScanner
+6. Determina what data to be parsed to CSV/Database
+
+
+*** Current folder structure.
+.
+├── AGENTS.md
+├── FOLDER_STRUCTURE.txt
+├── README.md
+├── android
+│   ├── app
+│   ├── build.gradle
+│   ├── gradle
+│   ├── gradle.properties
+│   ├── gradlew
+│   ├── gradlew.bat
+│   └── settings.gradle
+├── app
+│   ├── (tabs)
+│   ├── +html.tsx
+│   ├── +not-found.tsx
+│   ├── _layout.tsx
+│   └── modal.tsx
+├── app.json
+├── assets
+│   ├── fonts
+│   └── images
+├── components
+│   ├── EditScreenInfo.tsx
+│   ├── ExternalLink.tsx
+│   ├── StyledText.tsx
+│   ├── Themed.tsx
+│   ├── __tests__
+│   ├── useClientOnlyValue.ts
+│   ├── useClientOnlyValue.web.ts
+│   ├── useColorScheme.ts
+│   └── useColorScheme.web.ts
+├── constants
+│   └── Colors.ts
+├── ocr_service.py
+├── package-lock.json
+├── package.json
+├── requirements.txt
+├── server
+│   ├── app.json
+│   ├── eng.traineddata
+│   ├── index.js
+│   ├── package-lock.json
+│   ├── package.json
+│   └── preprocessed_1753394664613.jpg
+├── supabase
+│   ├── database.types.ts
+│   └── migrations
+└── tsconfig.json
+
+15 directories, 34 files
