@@ -282,7 +282,7 @@ app.post('/ocr', async (req, res) => {
 app.post('/confirm', async (req, res) => {
   const { code, name = '', size = '' } = req.body || {};
   if (!code) return res.status(400).json({ error: 'Missing code' });
-  const updates = { product_name: name, size };
+  const updates = { product_name: name, contents_size_weight: size };
   const { data, error } = await supabase
     .from('products')
     .update(updates)

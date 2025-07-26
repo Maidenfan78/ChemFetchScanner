@@ -260,7 +260,7 @@ export default function Confirm() {
 
     Alert.alert(
       'Saved',
-      `Name: ${name}\nSize: ${size}`,
+      `Name: ${name}\nSize/Weight: ${size}`,
       [{
         text: 'OK', onPress: () => {
           setStep('photo');
@@ -293,12 +293,12 @@ export default function Confirm() {
     >
       <View style={styles.modalBackdrop}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalLabel}>Enter size for {pendingName}</Text>
+          <Text style={styles.modalLabel}>Enter size/weight for {pendingName}</Text>
           <TextInput
             style={styles.input}
             value={pendingSize}
             onChangeText={setPendingSize}
-            placeholder="Size"
+            placeholder="Size/weight"
             placeholderTextColor="#aaa"
           />
           <Button title="Save" onPress={() => { setSizePromptVisible(false); saveItem(pendingName, pendingSize.trim()); }} />
@@ -413,7 +413,7 @@ export default function Confirm() {
           <View style={styles.option}>
             <Text style={styles.label}>Barcode/Web Result</Text>
             <Text>Name: {barcodeName || '(none)'}</Text>
-            <Text>Size: {barcodeSize || '(none)'}</Text>
+            <Text>Size/Weight: {barcodeSize || '(none)'}</Text>
             <Button
               title="Use Barcode/Web"
               onPress={() => onConfirm(barcodeName, barcodeSize)}
@@ -422,7 +422,7 @@ export default function Confirm() {
           <View style={styles.option}>
             <Text style={styles.label}>Photo (OCR) Result</Text>
             <Text>Name: {ocr.bestName || '(none)'}</Text>
-            <Text>Size: {ocr.bestSize || '(none)'}</Text>
+            <Text>Size/Weight: {ocr.bestSize || '(none)'}</Text>
             <Button
               title="Use Photo (OCR)"
               onPress={() => onConfirm(ocr.bestName || '', ocr.bestSize || '')}
@@ -457,12 +457,12 @@ export default function Confirm() {
           placeholderTextColor="#aaa"
           autoFocus={true}
         />
-        <Text style={styles.textLabel}>Size:</Text>
+        <Text style={styles.textLabel}>Size/Weight:</Text>
         <TextInput
           style={styles.input}
           value={manualSize}
           onChangeText={setManualSize}
-          placeholder="Add size"
+          placeholder="Add size/weight"
           placeholderTextColor="#aaa"
         />
         <Button

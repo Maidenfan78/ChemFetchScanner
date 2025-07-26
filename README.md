@@ -9,11 +9,11 @@ ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans
 - **Barcode scanning** with `expo-camera`.
 - **Bing search** via headless Puppeteer (fallback to Cheerio).
 - **Database first** – if a scanned code already exists, saved details are returned immediately.
-- **Web scraping** of result pages for product name and size when a code is unknown.
+- **Web scraping** of result pages for product name and size/weight when a code is unknown.
 - **Image confirmation** – capture a focused photo of the product label, crop it with adjustable handles and run OCR via the Python service.
 - **Mismatch choice** – compare OCR results with scraped text, then choose which to keep or enter details manually.
 - **SDS link detection** for safety data sheets.
-- **Supabase storage** for final name and size.
+- **Supabase storage** for final name and size/weight.
 - **GPU check** endpoint at `/gpu-check` to verify PaddleOCR is using CUDA.
 
 ---
@@ -109,9 +109,9 @@ CREATE TABLE products (
 
 1. Scan a barcode in the app.
 2. The server checks Supabase – if the barcode exists, stored data is returned.
-3. If not found, the server searches Bing, scrapes a few pages and returns the best guess for name and size.
+3. If not found, the server searches Bing, scrapes a few pages and returns the best guess for name and size/weight.
 4. The user is prompted to take a close photo of the item label.
-5. OCR runs on the cropped label to extract a name and size.
+5. OCR runs on the cropped label to extract a name and size/weight.
 6. The scraped and OCR results are shown so the user can choose or manually edit.
 7. The chosen details are saved back to Supabase.
 
@@ -123,7 +123,7 @@ This cropped approach avoids extra artwork confusing the OCR and improves size d
 
 🔄 Scrape SDS URL directly from product pages
 🔄 Store SDS link in Supabase sds_url column
-🔄 Merge size and weight fields into one
+✅ Merge size and weight fields into one
 ⏳ Parse SDS PDF contents into structured fields
 ⏳ Add web/desktop app for SDS browsing
 ⏳ Export SDS details to CSV or searchable DB
