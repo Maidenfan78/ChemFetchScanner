@@ -1,0 +1,25 @@
+.
+├── AGENTS_AND_TEAM.md
+├── docs/
+│   ├── README.md
+│   └── FOLDER_STRUCTURE.txt
+├── apps/
+│   └── mobile/
+│       ├── app/
+│       ├── assets/
+│       ├── components/
+│       ├── constants/
+│       └── tsconfig.json
+├── server/
+│   ├── node/
+│   └── python/
+│       ├── ocr_service.py
+│       └── vendor/
+├── scripts/
+│   └── python/
+├── supabase/
+│   ├── database.types.ts
+│   └── migrations/
+├── .env.example
+├── package.json
+└── tsconfig.json
