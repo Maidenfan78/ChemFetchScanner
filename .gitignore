@@ -2,6 +2,7 @@
 
 # dependencies
 node_modules/
+vendor/
 /server/python/vendor/**
 !/server/python/vendor/.gitkeep
 
