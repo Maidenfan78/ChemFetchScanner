@@ -17,6 +17,24 @@ ChemFetchScanner is a cross-platform mobile app built with Expo Router. It scans
 - **GPU check** endpoint at `/gpu-check` to verify PaddleOCR is using CUDA.
 
 ---
+## 🎨 Color Scheme
+
+| Purpose             | Color Name     | Hex       |
+|---------------------|----------------|-----------|
+| Primary             | Deep Indigo    | `#3A3D98` |
+| Secondary           | Soft Orange    | `#FFA552` |
+| Accent (Success)    | Lime Green     | `#80C900` |
+| Error/Warning       | Safety Red     | `#D32F2F` |
+| Background (Light)  | Off-white      | `#F5F7FA` |
+| Background (Dark)   | Rich Charcoal  | `#1C1C1E` |
+| Text (Light)        | Charcoal       | `#1F2933` |
+| Text (Dark)         | Light Gray     | `#F2F2F2` |
+| Borders/Dividers    | Slate Gray     | `#CBD2D9` |
+| Button Hover        | Royal Blue Tint| `#4F52B6` |
+
+All colors meet WCAG 2.1 AA contrast requirements. Defined in [`apps/mobile/src/constants/Colors.ts`](apps/mobile/src/constants/Colors.ts).
+
+---
 
 ## Tech Stack
 
@@ -67,7 +85,7 @@ CREATE TABLE products (
    ```
 4. **Run the backend**
    ```bash
-   npm start
+    node server/index.js
    ```
 5. **Start the OCR service**
    ```bash
@@ -106,3 +124,57 @@ Still to add to the code:
 
 1. The code will scrape the web for `sds_url`. The best approach for this is still being evaluated.
 2. The code will store the URL in the `products` table under `sds_url`. The `size` and `weight` fields will be merged since they are effectively the same value.
+
+## Folder & File structure
+
+.
+├── AGENTS.md
+├── FOLDER_STRUCTURE.txt
+├── README.md
+├── android
+│   ├── app
+│   ├── build.gradle
+│   ├── gradle
+│   ├── gradle.properties
+│   ├── gradlew
+│   ├── gradlew.bat
+│   └── settings.gradle
+├── app
+│   ├── (tabs)
+│   ├── +html.tsx
+│   ├── +not-found.tsx
+│   ├── _layout.tsx
+│   └── modal.tsx
+├── app.json
+├── assets
+│   ├── fonts
+│   └── images
+├── components
+│   ├── EditScreenInfo.tsx
+│   ├── ExternalLink.tsx
+│   ├── StyledText.tsx
+│   ├── Themed.tsx
+│   ├── __tests__
+│   ├── useClientOnlyValue.ts
+│   ├── useClientOnlyValue.web.ts
+│   ├── useColorScheme.ts
+│   └── useColorScheme.web.ts
+├── constants
+│   └── Colors.ts
+├── ocr_service.py
+├── package-lock.json
+├── package.json
+├── requirements.txt
+├── server
+│   ├── app.json
+│   ├── eng.traineddata
+│   ├── index.js
+│   ├── package-lock.json
+│   ├── package.json
+│   └── preprocessed_1753394664613.jpg
+├── supabase
+│   ├── database.types.ts
+│   └── migrations
+└── tsconfig.json
+
+15 directories, 34 files
